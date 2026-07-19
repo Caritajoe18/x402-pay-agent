@@ -1,20 +1,40 @@
 # pay-agent
 
-An AI agent that autonomously purchases data from x402-protected APIs using Hedera micropayments.
+An AI agent that autonomously purchases data from x402-protected APIs using Hedera micropayments, with every payment logged to an immutable HCS audit trail.
 Submitted for the Hedera x402 Bounty (hedera.com/x402-bounty).
+
+## Real-World Application: Agentic Commerce Infrastructure
+
+AI agents are becoming autonomous economic actors but lack a payment layer. pay-agent builds that layer: per-request micropayments on Hedera (seconds to settle, $0.0001/tx) with immutable audit trails via HCS.
+
+Industries that need this:
+- Algorithmic trading: bots buy data per-query, HCS satisfies SEC/MiFID II compliance
+- AI/ML: agents buy training data and inference at $0.001 per call
+- Research marketplace: pay-per-access instead of subscriptions
+- Supply chain/ESG: auditable chain of custody for compliance data
 
 ## Project Structure
 
-- packages/server — Express API server with x402 resource server and AI agent
+- packages/server — Express API server with x402 resource server, AI agent, and HCS audit trail
 - packages/web — React (Vite) dashboard
 
 ## Key Technologies
 
 - x402 protocol (@x402/express, @x402/core, @x402/fetch, @x402/hedera)
 - Hedera testnet (hedera:testnet) — HBAR micropayments, ~$0.0001/tx
+- Hedera Consensus Service — immutable audit trail for every x402 payment
+- @hiero-ledger/sdk — native Hedera SDK for HCS topic creation and message submission
 - Ollama LLM (@langchain/ollama) for agent reasoning
 - LangChain for tool orchestration
 - x402.org facilitator handles verification and settlement
+
+## Hedera Services
+
+| Service | Usage |
+|---------|-------|
+| Hedera Token Service (HTS) | Native HBAR transfers for x402 micropayments |
+| Hedera Consensus Service (HCS) | Immutable log of every payment event to a topic |
+| HashScan | Block explorer for verifying transactions and audit logs |
 
 ## x402 Flow
 
@@ -24,6 +44,27 @@ Submitted for the Hedera x402 Bounty (hedera.com/x402-bounty).
 4. Client retries with PAYMENT-SIGNATURE header
 5. Server verifies via x402.org facilitator, settles on Hedera
 6. Server responds with data + PAYMENT-RESPONSE receipt
+7. HCS audit hook logs the payment event (transaction ID, amount, endpoint, timestamp) to an HCS topic
+
+## HCS Audit Trail
+
+Every x402 payment event is submitted as a message to a dedicated HCS topic. This creates an immutable, timestamped ledger of all agent spending.
+
+Topic message format:
+```json
+{
+  "event": "x402_payment",
+  "transactionId": "0.0.12345@1234567890.123456789",
+  "amount": "100000",
+  "token": "HBAR",
+  "endpoint": "/api/weather",
+  "price": "$0.001",
+  "timestamp": "2025-07-19T12:00:00.000Z",
+  "hashscan": "https://hashscan.io/testnet/transaction/..."
+}
+```
+
+Query the HCS topic to retrieve the full audit log — verifiable on HashScan.
 
 ## Hedera Details
 
@@ -46,10 +87,16 @@ Client-side:
 - wrapFetchWithPayment from @x402/fetch to auto-handle 402 responses
 - x402Client from @x402/core/client to register payment schemes
 
+HCS:
+- @hiero-ledger/sdk Client.createTopic() to create the audit topic
+- @hiero-ledger/sdk TopicMessageSubmitTransaction to log events
+- TopicMessageQuery to read back audit entries
+
 ## Environment Variables
 
 HEDERA_ACCOUNT_ID — Hedera testnet account ID (e.g. 0.0.12345)
 HEDERA_PRIVATE_KEY — ECDSA private key for the account
+HCS_TOPIC_ID — HCS topic ID for the audit trail (created on first run if not set)
 OLLAMA_BASE_URL — Ollama server URL (default: http://localhost:11434)
 OLLAMA_MODEL — Model to use (default: llama3.2:3b)
 PORT — Server port (default: 4021)
