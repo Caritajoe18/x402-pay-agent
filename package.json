@@ -1,0 +1,17 @@
+{
+  "name": "pay-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "x402 Autonomous Data Agent on Hedera — an AI agent that pays per API call using x402 micropayments",
+  "scripts": {
+    "dev:server": "pnpm --filter @pay-agent/server dev",
+    "dev:web": "pnpm --filter @pay-agent/web dev",
+    "dev": "pnpm run dev:server & pnpm run dev:web",
+    "build": "pnpm --filter @pay-agent/server build && pnpm --filter @pay-agent/web build",
+    "start": "pnpm --filter @pay-agent/server start"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0"
+}

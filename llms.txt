@@ -1,0 +1,56 @@
+# pay-agent
+
+An AI agent that autonomously purchases data from x402-protected APIs using Hedera micropayments.
+Submitted for the Hedera x402 Bounty (hedera.com/x402-bounty).
+
+## Project Structure
+
+- packages/server — Express API server with x402 resource server and AI agent
+- packages/web — React (Vite) dashboard
+
+## Key Technologies
+
+- x402 protocol (@x402/express, @x402/core, @x402/fetch, @x402/hedera)
+- Hedera testnet (hedera:testnet) — HBAR micropayments, ~$0.0001/tx
+- Ollama LLM (@langchain/ollama) for agent reasoning
+- LangChain for tool orchestration
+- x402.org facilitator handles verification and settlement
+
+## x402 Flow
+
+1. Client requests a protected endpoint
+2. Server responds with HTTP 402 + payment instructions in headers
+3. Client signs a Hedera TransferTransaction using @x402/hedera
+4. Client retries with PAYMENT-SIGNATURE header
+5. Server verifies via x402.org facilitator, settles on Hedera
+6. Server responds with data + PAYMENT-RESPONSE receipt
+
+## Hedera Details
+
+- Network: hedera:testnet
+- USDC Token ID: 0.0.429274 (6 decimals)
+- HBAR supported as native token (asset ID 0.0.0)
+- Facilitator: https://x402.org/facilitator (supports hedera:testnet)
+- Block explorer: https://hashscan.io/testnet
+
+## x402 SDK Reference
+
+Server-side:
+- paymentMiddleware() from @x402/express wraps Express routes
+- ExactHederaScheme from @x402/hedera/exact/server for Hedera settlement
+- x402ResourceServer + HTTPFacilitatorClient from @x402/core/server
+
+Client-side:
+- createClientHederaSigner from @x402/hedera for signing payments
+- ExactHederaScheme from @x402/hedera/exact/client for client-side signing
+- wrapFetchWithPayment from @x402/fetch to auto-handle 402 responses
+- x402Client from @x402/core/client to register payment schemes
+
+## Environment Variables
+
+HEDERA_ACCOUNT_ID — Hedera testnet account ID (e.g. 0.0.12345)
+HEDERA_PRIVATE_KEY — ECDSA private key for the account
+OLLAMA_BASE_URL — Ollama server URL (default: http://localhost:11434)
+OLLAMA_MODEL — Model to use (default: llama3.2:3b)
+PORT — Server port (default: 4021)
+FACILITATOR_URL — x402 facilitator URL (default: https://x402.org/facilitator)
