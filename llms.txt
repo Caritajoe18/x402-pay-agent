@@ -1,32 +1,112 @@
 # pay-agent
 
-An AI agent that autonomously purchases data from x402-protected APIs using Hedera micropayments, with every payment logged to an immutable HCS audit trail.
+An AI agent that autonomously discovers, purchases, and consumes data from x402-protected APIs on Hedera testnet. Every payment is logged to an immutable HCS audit trail.
+
 Submitted for the Hedera x402 Bounty (hedera.com/x402-bounty).
+
+## What x402 Is
+
+x402 is an open payment standard that reuses the HTTP 402 "Payment Required" status code to let servers request payment and clients pay inside ordinary HTTP request/response cycles. It turns payment into something a client can satisfy as easily as following a redirect — no checkout page, account signup, or API-key dance required.
+
+Hedera contributes its own `exact` payment scheme and reference implementation to the official x402 repository (github.com/x402-foundation/x402), so applications and AI agents can settle payments in HBAR or HTS tokens with Hedera's speed and low, predictable fees.
+
+### What x402 IS
+- An HTTP-native standard for a single, discrete request → pay → response handshake
+- Stateless and per-request — each payment is self-verifying, with no billing session or subscription
+- Settlement-agnostic — works across chains and assets; on Hedera it settles in HBAR or HTS tokens
+- A shared rulebook so any wallet or service can negotiate value the same way it negotiates data
+
+### What x402 is NOT
+- Not a blockchain or a new payment network — it lives on top of existing rails
+- Not a custodial processor — facilitators verify and submit, but can never move funds without a signed authorization
+- Not for streaming or multi-hop routing — it is optimized for discrete request/response cycles
+- Not a general "agentic wallet" — it is one well-scoped primitive, not an autonomy framework
 
 ## Real-World Application: Agentic Commerce Infrastructure
 
 AI agents are becoming autonomous economic actors but lack a payment layer. pay-agent builds that layer: per-request micropayments on Hedera (seconds to settle, $0.0001/tx) with immutable audit trails via HCS.
 
-Industries that need this:
-- Algorithmic trading: bots buy data per-query, HCS satisfies SEC/MiFID II compliance
-- AI/ML: agents buy training data and inference at $0.001 per call
-- Research marketplace: pay-per-access instead of subscriptions
-- Supply chain/ESG: auditable chain of custody for compliance data
+### Use Cases
+
+- **Algorithmic Trading** — Bots buy real-time sentiment, on-chain data, news feeds per-query instead of $10K+/mo subscriptions. HCS satisfies SEC/MiFID II compliance.
+- **AI/ML Data Pipeline** — Agents buy training data, inference, specialized APIs. Thousands of $0.001 transactions per day, impossible with credit cards.
+- **Research Marketplace** — Researchers sell datasets and papers. Readers pay per access. No accounts, no KYC.
+- **Supply Chain & ESG** — Companies buy verified carbon credits and compliance data. HCS creates auditable chain of custody.
 
 ## Project Structure
 
-- packages/server — Express API server with x402 resource server, AI agent, and HCS audit trail
-- packages/web — React (Vite) dashboard
+```
+packages/server/
+├── src/
+│   ├── index.ts              # Entry point — registers providers, starts server
+│   ├── config.ts             # Environment variable loading
+│   ├── hedera.ts             # Hedera client + HCS helpers (create topic, log, query)
+│   ├── x402.ts               # Builds x402 paywall from registered providers
+│   ├── providers/
+│   │   ├── types.ts          # Provider interface definition
+│   │   ├── registry.ts       # Dynamic registry + x402 route builder
+│   │   ├── weather.ts        # Open-Meteo real API (free, no key)
+│   │   ├── market.ts         # CoinGecko real API (free, no key)
+│   │   └── compliance.ts     # Tax/regulatory data by jurisdiction
+│   ├── routes/
+│   │   ├── index.ts          # Aggregates all route modules
+│   │   ├── providers.ts      # GET /api/providers — lists available providers
+│   │   ├── data.ts           # GET /api/data/:provider — generic data endpoint
+│   │   ├── audit.ts          # GET /api/audit — HCS audit trail
+│   │   └── chat.ts           # POST /chat — AI agent chat
+│   └── tools/
+│       └── agent.ts          # LangChain LLM + dynamically built tools from providers
+packages/web/
+├── src/
+│   ├── main.tsx              # React entry point
+│   ├── App.tsx               # Dashboard — chat, providers, audit trail
+│   └── index.css             # Dark terminal theme
+├── index.html
+└── vite.config.ts            # Dev proxy to server
+```
+
+## Provider System
+
+The core architecture is a **provider registry**. Each data source implements the `Provider` interface:
+
+```typescript
+interface Provider {
+  slug: string;          // URL segment — e.g. "weather"
+  name: string;          // Display name
+  description: string;   // What it returns
+  price: string;         // Cost per request — e.g. "$0.001"
+  params: ProviderParam[];  // Query parameters
+  fetch(params: Record<string, string>): Promise<unknown>;  // Real API call
+}
+```
+
+Providers register in `index.ts`. The x402 paywall, agent tools, and provider listing all build automatically from the registry. Adding a new data source = one file + one `registerProvider()` call.
+
+### Built-in Providers
+
+| Provider | Slug | Price | Upstream API | Real Data? |
+|----------|------|-------|-------------|------------|
+| Weather | `weather` | $0.001 | Open-Meteo | Yes — geocoding + forecast |
+| Crypto Market | `market` | $0.002 | CoinGecko | Yes — live prices, volume, market cap |
+| Tax & Compliance | `compliance` | $0.005 | Internal DB | Yes — real tax rates by jurisdiction |
+
+### API Endpoints
+
+- `GET /api/providers` — List all registered providers with params and prices
+- `GET /api/data/:provider?param=value` — Fetch data from a provider (behind x402 paywall)
+- `GET /api/audit` — Query HCS audit trail for all payment events
+- `POST /chat` — AI agent chat (discovers providers, builds tools dynamically)
+- `GET /health` — Server health check
 
 ## Key Technologies
 
 - x402 protocol (@x402/express, @x402/core, @x402/fetch, @x402/hedera)
 - Hedera testnet (hedera:testnet) — HBAR micropayments, ~$0.0001/tx
-- Hedera Consensus Service — immutable audit trail for every x402 payment
+- Hedera Consensus Service (HCS) — immutable audit trail for every x402 payment
 - @hiero-ledger/sdk — native Hedera SDK for HCS topic creation and message submission
+- Blocky402 facilitator — open x402 facilitator with Hedera testnet support (no API key)
 - Ollama LLM (@langchain/ollama) for agent reasoning
-- LangChain for tool orchestration
-- x402.org facilitator handles verification and settlement
+- LangChain — tool orchestration, tools built dynamically from providers
 
 ## Hedera Services
 
@@ -36,15 +116,54 @@ Industries that need this:
 | Hedera Consensus Service (HCS) | Immutable log of every payment event to a topic |
 | HashScan | Block explorer for verifying transactions and audit logs |
 
-## x402 Flow
+## x402 Flow (Fee-Payer Model)
 
-1. Client requests a protected endpoint
-2. Server responds with HTTP 402 + payment instructions in headers
-3. Client signs a Hedera TransferTransaction using @x402/hedera
-4. Client retries with PAYMENT-SIGNATURE header
-5. Server verifies via x402.org facilitator, settles on Hedera
-6. Server responds with data + PAYMENT-RESPONSE receipt
-7. HCS audit hook logs the payment event (transaction ID, amount, endpoint, timestamp) to an HCS topic
+The Hedera exact scheme uses a fee-payer model where the facilitator pays gas fees and submits transactions:
+
+1. Client requests a protected endpoint (e.g. `GET /api/data/weather?city=Tokyo`)
+2. Server responds with HTTP 402 + PaymentRequirements describing cost, asset, payTo, and feePayer
+3. Client constructs a Hedera TransferTransaction that moves the requested asset to payTo, sets the feePayer, signs it, and Base64-encodes it into a PaymentPayload
+4. Server forwards the payload to the facilitator's /verify endpoint
+5. Facilitator validates the transaction structure, asset, amount, and destination
+6. Facilitator adds its signature as fee payer, pays the gas, and submits to Hedera via /settle
+7. Server responds with data + PAYMENT-RESPONSE receipt
+8. HCS audit hook logs the payment event (provider, amount, endpoint, timestamp) to an HCS topic
+
+### PaymentRequirements format:
+```json
+{
+  "scheme": "exact",
+  "network": "hedera:testnet",
+  "amount": "100000",
+  "asset": "0.0.0",
+  "payTo": "0.0.12345",
+  "maxTimeoutSeconds": 180,
+  "extra": {
+    "feePayer": "0.0.7162784"
+  }
+}
+```
+
+### PaymentPayload format:
+```json
+{
+  "x402Version": 2,
+  "resource": { "url": "/api/data/weather", "description": "..." },
+  "accepted": { "scheme": "exact", "network": "hedera:testnet", ... },
+  "payload": { "transaction": "AAAAAAAAAAAAA...AAAAAAAAAAAAA=" }
+}
+```
+
+## Hedera exact Scheme Details
+
+| Property | Detail |
+|----------|--------|
+| Protocol version | x402Version: 2 |
+| Networks | hedera:mainnet, hedera:testnet (CAIP-2 identifiers) |
+| Assets | Native HBAR (entity ID 0.0.0) or any HTS fungible token (by entity ID) |
+| Amounts | HBAR in tinybars (1 HBAR = 10^8 tinybars); HTS tokens in smallest unit per decimals |
+| Fee model | Facilitator acts as feePayer, paying network fees and submitting the transaction |
+| Transaction | Direct, partially-signed TransferTransaction (no ScheduleCreate wrapping) |
 
 ## HCS Audit Trail
 
@@ -54,13 +173,11 @@ Topic message format:
 ```json
 {
   "event": "x402_payment",
-  "transactionId": "0.0.12345@1234567890.123456789",
-  "amount": "100000",
-  "token": "HBAR",
-  "endpoint": "/api/weather",
+  "provider": "weather",
+  "endpoint": "/api/data/weather",
   "price": "$0.001",
-  "timestamp": "2025-07-19T12:00:00.000Z",
-  "hashscan": "https://hashscan.io/testnet/transaction/..."
+  "params": { "city": "Tokyo" },
+  "timestamp": "2026-07-23T12:00:00.000Z"
 }
 ```
 
@@ -71,33 +188,61 @@ Query the HCS topic to retrieve the full audit log — verifiable on HashScan.
 - Network: hedera:testnet
 - USDC Token ID: 0.0.429274 (6 decimals)
 - HBAR supported as native token (asset ID 0.0.0)
-- Facilitator: https://x402.org/facilitator (supports hedera:testnet)
+- Blocky402 facilitator: https://api.testnet.blocky402.com (supports hedera:testnet, no API key required)
+- Blocky402 fee payer: 0.0.7162784
 - Block explorer: https://hashscan.io/testnet
+- Facilitator discovery: GET https://api.testnet.blocky402.com/supported
 
 ## x402 SDK Reference
 
 Server-side:
-- paymentMiddleware() from @x402/express wraps Express routes
-- ExactHederaScheme from @x402/hedera/exact/server for Hedera settlement
+- paymentMiddlewareFromConfig() from @x402/express wraps Express routes with x402 paywall
+- ExactHederaScheme from @x402/hedera/exact/server for Hedera settlement verification
 - x402ResourceServer + HTTPFacilitatorClient from @x402/core/server
+- buildX402Routes() from providers/registry.ts generates route config from registered providers
 
 Client-side:
-- createClientHederaSigner from @x402/hedera for signing payments
+- createClientHederaSigner from @x402/hedera for signing payments with a Hedera private key
 - ExactHederaScheme from @x402/hedera/exact/client for client-side signing
-- wrapFetchWithPayment from @x402/fetch to auto-handle 402 responses
+- wrapFetchWithPayment from @x402/fetch to auto-handle 402 responses and sign/retry
 - x402Client from @x402/core/client to register payment schemes
 
 HCS:
-- @hiero-ledger/sdk Client.createTopic() to create the audit topic
+- @hiero-ledger/sdk TopicCreateTransaction to create the audit topic
 - @hiero-ledger/sdk TopicMessageSubmitTransaction to log events
-- TopicMessageQuery to read back audit entries
+- TopicMessageQuery.subscribe() to read back audit entries
 
 ## Environment Variables
 
-HEDERA_ACCOUNT_ID — Hedera testnet account ID (e.g. 0.0.12345)
-HEDERA_PRIVATE_KEY — ECDSA private key for the account
-HCS_TOPIC_ID — HCS topic ID for the audit trail (created on first run if not set)
-OLLAMA_BASE_URL — Ollama server URL (default: http://localhost:11434)
-OLLAMA_MODEL — Model to use (default: llama3.2:3b)
-PORT — Server port (default: 4021)
-FACILITATOR_URL — x402 facilitator URL (default: https://x402.org/facilitator)
+### packages/server/.env.example
+```
+HEDERA_ACCOUNT_ID=0.0.12345
+HEDERA_PRIVATE_KEY=0x...
+HCS_TOPIC_ID=
+FACILITATOR_URL=https://api.testnet.blocky402.com
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2:3b
+PORT=4021
+```
+
+### packages/web/.env.example
+```
+# No env vars needed for local dev — Vite proxies to localhost:4021
+VITE_SERVER_URL=http://localhost:4021
+```
+
+## Hedera Facilitators
+
+### Blocky402 (recommended for testnet)
+- Open x402 facilitator with Hedera support
+- Testnet: https://api.testnet.blocky402.com (no API key required)
+- Mainnet: rolling out, will require API key
+- Fee payer account: 0.0.7162784
+- Docs: blocky402.com/docs
+
+### Run your own
+x402 is permissionless — any team can operate a facilitator:
+1. Implement the exact Hedera scheme using @x402/hedera reference implementation
+2. Fund and configure a fee-payer account
+3. Expose GET /supported, POST /verify, POST /settle
+4. Enforce safety checks (transaction layout, asset exactness, fee-payer safety, replay protection)

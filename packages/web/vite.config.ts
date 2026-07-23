@@ -8,7 +8,6 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:4021',
       '/chat': 'http://localhost:4021',
-      '/demo': 'http://localhost:4021',
     },
   },
 });

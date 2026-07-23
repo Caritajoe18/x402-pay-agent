@@ -9,9 +9,26 @@ interface ChatMessage {
 interface AuditEntry {
   event: string;
   endpoint: string;
+  provider?: string;
   price: string;
   timestamp: string;
   consensusTimestamp?: string;
+  transactionId?: string;
+  hashscanUrl?: string;
+  topicId?: string;
+}
+
+interface AuditData {
+  topicId: string;
+  messages: AuditEntry[];
+}
+
+interface Provider {
+  slug: string;
+  name: string;
+  description: string;
+  price: string;
+  params: Array<{ name: string; description: string; required: boolean }>;
 }
 
 export default function App() {
@@ -19,6 +36,8 @@ export default function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [hcsTopicId, setHcsTopicId] = useState<string>("");
+  const [providers, setProviders] = useState<Provider[]>([]);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,8 +47,9 @@ export default function App() {
   const loadAudit = async () => {
     try {
       const res = await fetch("/api/audit");
-      const data = await res.json();
+      const data: AuditData = await res.json();
       setAuditEntries(data.messages || []);
+      if (data.topicId) setHcsTopicId(data.topicId);
     } catch {
       // silent
     }
@@ -37,6 +57,10 @@ export default function App() {
 
   useEffect(() => {
     loadAudit();
+    fetch("/api/providers")
+      .then((r) => r.json())
+      .then((d) => setProviders(d.providers || []))
+      .catch(() => {});
     const interval = setInterval(loadAudit, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -84,18 +108,31 @@ export default function App() {
   };
 
   const totalSpend = auditEntries.length;
-  const endpoints = [...new Set(auditEntries.map((e) => e.endpoint))];
 
   return (
     <div className="app">
       <header>
-        <h1>pay-agent</h1>
+        <h1>
+          pay<span>-agent</span>
+        </h1>
         <p>
-          AI data agent on Hedera testnet &mdash; pays per API call via x402
-          micropayments
+          AI agents pay per API call via x402 on Hedera. No subscriptions, no
+          API keys &mdash; just request, pay, receive. Every payment logged to
+          HCS.
           <span className="badge badge-hedera" style={{ marginLeft: 8 }}>
             hedera:testnet
           </span>
+          {hcsTopicId && (
+            <a
+              href={`https://hashscan.io/testnet/topic/${hcsTopicId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="badge badge-hcs"
+              style={{ marginLeft: 4, textDecoration: "none" }}
+            >
+              HCS ↗
+            </a>
+          )}
         </p>
       </header>
 
@@ -106,12 +143,49 @@ export default function App() {
           <div className="sub">via x402 micropayments</div>
         </div>
         <div className="card">
-          <h3>Endpoints Used</h3>
-          <div className="value">{endpoints.length}</div>
+          <h3>Providers</h3>
+          <div className="value">{providers.length}</div>
           <div className="sub">
-            {endpoints.length > 0
-              ? endpoints.slice(0, 3).join(", ")
-              : "none yet"}
+            {providers.length > 0
+              ? providers.map((p) => `${p.slug} (${p.price})`).join(", ")
+              : "loading..."}
+          </div>
+        </div>
+      </div>
+
+      <div className="flow-section">
+        <h2>How It Works</h2>
+        <div className="flow-steps">
+          <div className="flow-step">
+            <div className="flow-num">1</div>
+            <div className="flow-text">
+              <strong>Request</strong>
+              <span>Agent asks for data via chat</span>
+            </div>
+          </div>
+          <div className="flow-arrow">→</div>
+          <div className="flow-step">
+            <div className="flow-num">2</div>
+            <div className="flow-text">
+              <strong>402</strong>
+              <span>Server returns payment requirements</span>
+            </div>
+          </div>
+          <div className="flow-arrow">→</div>
+          <div className="flow-step">
+            <div className="flow-num">3</div>
+            <div className="flow-text">
+              <strong>Pay</strong>
+              <span>Facilitator settles HBAR on Hedera</span>
+            </div>
+          </div>
+          <div className="flow-arrow">→</div>
+          <div className="flow-step">
+            <div className="flow-num">4</div>
+            <div className="flow-text">
+              <strong>Receive</strong>
+              <span>Data returned + logged to HCS</span>
+            </div>
           </div>
         </div>
       </div>
@@ -122,9 +196,13 @@ export default function App() {
           <div className="chat-messages">
             {messages.length === 0 && (
               <div className="empty-audit">
-                Ask the agent to fetch data — it will pay with HBAR via x402.
+                Ask the agent to fetch real data &mdash; it pays via x402 on Hedera.
                 <br />
-                Try: "What's the weather in Tokyo?" or "Get me the BTC price"
+                <br />
+                <strong>Algorithmic trading:</strong> "Get me bitcoin price and sentiment"<br />
+                <strong>Compliance:</strong> "Tax rates in Germany for digital services"<br />
+                <strong>Supply chain:</strong> "Show me verified carbon credits in Brazil"<br />
+                <strong>Research:</strong> "Latest headlines on fed rate decisions"
               </div>
             )}
             {messages.map((msg, i) => (
@@ -156,7 +234,7 @@ export default function App() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask the agent to fetch paid data..."
+              placeholder="e.g. Get me the ETH price, or tax rates in Japan..."
               disabled={loading}
             />
             <button onClick={sendMessage} disabled={loading || !input.trim()}>
@@ -181,8 +259,21 @@ export default function App() {
               .map((entry, i) => (
                 <div key={i} className="audit-entry">
                   <div className="event-dot" />
-                  <div className="endpoint">{entry.endpoint}</div>
+                  <div className="endpoint">
+                    {entry.provider || entry.endpoint}
+                  </div>
                   <div className="price">{entry.price}</div>
+                  {entry.hashscanUrl && (
+                    <a
+                      href={entry.hashscanUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hashscan-link"
+                      title={entry.transactionId || ""}
+                    >
+                      ↗ Tx
+                    </a>
+                  )}
                   <div className="time">
                     {new Date(entry.timestamp).toLocaleTimeString()}
                   </div>
