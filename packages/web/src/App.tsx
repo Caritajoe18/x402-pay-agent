@@ -259,11 +259,11 @@ export default function App() {
                 Ask the agent to fetch real data &mdash; it pays USDC via x402 on Hedera.
                 <br />
                 <br />
-                <strong>Algorithmic trading:</strong> "Get me bitcoin price and sentiment"<br />
+                <strong>Market data:</strong> "Get me bitcoin price"<br />
+                <strong>Sentiment:</strong> "What's the news sentiment on ethereum?"<br />
                 <strong>Compliance:</strong> "Tax rates in Germany for digital services"<br />
-                <strong>Supply chain:</strong> "Show me verified carbon credits in Brazil"<br />
-                <strong>Research:</strong> "Latest headlines on fed rate decisions"<br />
-                <strong>Precision Alpha:</strong> "Build me a crypto alpha signal from on-chain data"
+                <strong>ESG:</strong> "Show me verified carbon credits in Brazil"<br />
+                <strong>Multi-provider:</strong> "Get BTC price, ETH sentiment, and tax rates in Japan"
               </div>
             )}
             {messages.map((msg, i) => (
