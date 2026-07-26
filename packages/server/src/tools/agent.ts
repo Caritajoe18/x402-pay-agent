@@ -52,7 +52,7 @@ export function createAgent() {
     `- Oracles: Pyth Network, Chainlink\n` +
     `- Compliance: Terminal 3 (T3N) identity, S3 Data Marketplace\n\n` +
     `## Rules\n` +
-    `- Every x402 payment costs HBAR. Always explain what data you fetched and the cost.\n` +
+    `- Every x402 payment costs USDC. Always explain what data you fetched and the cost.\n` +
     `- All transactions are logged to HCS for immutable audit trail.\n` +
     `- If a tool fails, explain the error and suggest alternatives.\n` +
     `- Be concise. Return structured data when possible.`;

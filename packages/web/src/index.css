@@ -81,6 +81,12 @@ header p {
   font-size: 0.65rem;
 }
 
+.badge-usdc {
+  background: #1a3a2d;
+  color: #2775ca;
+  border: 1px solid #2775ca;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -122,6 +122,9 @@ export default function App() {
           <span className="badge badge-hedera" style={{ marginLeft: 8 }}>
             hedera:testnet
           </span>
+          <span className="badge badge-usdc" style={{ marginLeft: 4 }}>
+            USDC
+          </span>
           {hcsTopicId && (
             <a
               href={`https://hashscan.io/testnet/topic/${hcsTopicId}`}
@@ -140,7 +143,7 @@ export default function App() {
         <div className="card">
           <h3>Payments Made</h3>
           <div className="value">{totalSpend}</div>
-          <div className="sub">via x402 micropayments</div>
+          <div className="sub">USDC via x402 micropayments</div>
         </div>
         <div className="card">
           <h3>Providers</h3>
@@ -176,7 +179,7 @@ export default function App() {
             <div className="flow-num">3</div>
             <div className="flow-text">
               <strong>Sign</strong>
-              <span>Agent signs Hedera TransferTransaction</span>
+              <span>Agent signs USDC TransferTransaction on Hedera</span>
             </div>
           </div>
           <div className="flow-arrow">→</div>
@@ -226,7 +229,7 @@ export default function App() {
           <div className="chat-messages">
             {messages.length === 0 && (
               <div className="empty-audit">
-                Ask the agent to fetch real data &mdash; it pays via x402 on Hedera.
+                Ask the agent to fetch real data &mdash; it pays USDC via x402 on Hedera.
                 <br />
                 <br />
                 <strong>Algorithmic trading:</strong> "Get me bitcoin price and sentiment"<br />
@@ -315,7 +318,7 @@ export default function App() {
       </div>
 
       <div className="footer">
-        pay-agent &mdash; Autonomous Micropayments for Agentic Commerce &mdash;
+        pay-agent &mdash; Autonomous USDC Micropayments for Agentic Commerce &mdash;
         x402 on Hedera &mdash; Every payment logged to HCS
       </div>
     </div>
