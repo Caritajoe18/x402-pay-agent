@@ -90,8 +90,6 @@ export default function App() {
       .then((r) => r.json())
       .then((d) => setProviders(d.providers || []))
       .catch(() => {});
-    const interval = setInterval(loadAudit, 15000);
-    return () => clearInterval(interval);
   }, []);
 
   const sendMessage = async () => {
@@ -308,7 +306,12 @@ export default function App() {
       </div>
 
       <div className="audit-section">
-        <h2>HCS Audit Trail</h2>
+        <div className="audit-header">
+          <h2>HCS Audit Trail</h2>
+          <button className="audit-btn" onClick={loadAudit}>
+            Fetch Audit
+          </button>
+        </div>
         <div className="audit-list">
           {auditEntries.length === 0 ? (
             <div className="empty-audit">
