@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:4021',
       '/chat': 'http://localhost:4021',
+      '/health': 'http://localhost:4021',
     },
   },
 });
