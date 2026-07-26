@@ -18,11 +18,6 @@ interface AuditEntry {
   topicId?: string;
 }
 
-interface AuditData {
-  topicId: string;
-  messages: AuditEntry[];
-}
-
 interface Provider {
   slug: string;
   name: string;
@@ -46,10 +41,44 @@ export default function App() {
 
   const loadAudit = async () => {
     try {
-      const res = await fetch("/api/audit");
-      const data: AuditData = await res.json();
-      setAuditEntries(data.messages || []);
-      if (data.topicId) setHcsTopicId(data.topicId);
+      const healthRes = await fetch("/health");
+      const health = await healthRes.json();
+      const topicId = health.hcsTopicId || health.topicId;
+      if (!topicId) return;
+
+      setHcsTopicId(topicId);
+      const mirrorRes = await fetch(
+        `https://testnet.mirrornode.hedera.com/api/v1/topics/${topicId}/messages?limit=50&order=desc`
+      );
+      const data = await mirrorRes.json();
+      const entries: AuditEntry[] = (data.messages || []).map(
+        (m: Record<string, unknown>) => {
+          let parsed: Record<string, unknown> = {};
+          try {
+            parsed = JSON.parse(
+              new TextDecoder().decode(
+                Uint8Array.from(atob(m.message as string), (c) =>
+                  c.charCodeAt(0)
+                )
+              )
+            );
+          } catch { /* skip */ }
+          return {
+            event: (parsed.event as string) || "topic_message",
+            endpoint: (parsed.url as string) || (parsed.endpoint as string) || "",
+            provider: parsed.provider as string | undefined,
+            price: parsed.price as string || "",
+            timestamp: (m.consensus_timestamp as string) || "",
+            consensusTimestamp: m.consensus_timestamp as string,
+            transactionId: m.transaction_id as string,
+            hashscanUrl: m.transaction_id
+              ? `https://hashscan.io/testnet/transaction/${m.transaction_id}`
+              : undefined,
+            topicId,
+          };
+        }
+      );
+      setAuditEntries(entries);
     } catch {
       // silent
     }
