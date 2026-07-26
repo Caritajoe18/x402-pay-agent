@@ -88,18 +88,26 @@ export function createAgent() {
       if (tool) {
         const input =
           typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args);
+        console.log("[agent] Executing tool:", tc.name, "input:", input);
         const result = await tool.invoke(input);
+        console.log("[agent] Tool result:", result);
         toolResults.push({ tool: tc.name, input, result });
 
         messages.push(
           new HumanMessage(`Tool ${tc.name} result: ${result}`)
         );
+      } else {
+        console.log("[agent] Tool not found:", tc.name);
       }
     }
 
     let finalReply: string;
     if (toolResults.length > 0) {
       const finalResponse = await llmWithTools.invoke(messages);
+      console.log("[agent] Final LLM response:", JSON.stringify({
+        content: finalResponse.content,
+        tool_calls: finalResponse.tool_calls,
+      }));
       finalReply =
         typeof finalResponse.content === "string"
           ? finalResponse.content
