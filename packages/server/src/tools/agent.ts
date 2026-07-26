@@ -72,6 +72,10 @@ export function createAgent() {
     ];
 
     const response = await llmWithTools.invoke(messages);
+    console.log("[agent] LLM response:", JSON.stringify({
+      content: response.content,
+      tool_calls: response.tool_calls,
+    }));
     const toolCalls = response.tool_calls || [];
     const toolResults: Array<{
       tool: string;
