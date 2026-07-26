@@ -113,11 +113,11 @@ export default function App() {
     <div className="app">
       <header>
         <h1>
-          pay<span>-agent</span>
+          Precision <span>Alpha</span>
         </h1>
         <p>
-          Autonomous AI agent that discovers, pays for, and consumes data from
-          x402-protected APIs on Hedera. A universal browser for machine
+          Autonomous AI trader that discovers, pays for, and consumes data from
+          x402-protected APIs on Hedera. Algorithmic precision meets machine
           commerce &mdash; no subscriptions, no API keys.
           <span className="badge badge-hedera" style={{ marginLeft: 8 }}>
             hedera:testnet
@@ -141,12 +141,12 @@ export default function App() {
 
       <div className="grid">
         <div className="card">
-          <h3>Payments Made</h3>
+          <h3>Trades Executed</h3>
           <div className="value">{totalSpend}</div>
           <div className="sub">USDC via x402 micropayments</div>
         </div>
         <div className="card">
-          <h3>Providers</h3>
+          <h3>Data Sources</h3>
           <div className="value">{providers.length}</div>
           <div className="sub">
             {providers.length > 0
@@ -157,13 +157,13 @@ export default function App() {
       </div>
 
       <div className="flow-section">
-        <h2>The Universal Handshake</h2>
+        <h2>The Alpha Pipeline</h2>
         <div className="flow-steps">
           <div className="flow-step">
             <div className="flow-num">1</div>
             <div className="flow-text">
-              <strong>Discover</strong>
-              <span>Agent identifies a target merchant endpoint</span>
+              <strong>Scan</strong>
+              <span>Agent identifies target data endpoints</span>
             </div>
           </div>
           <div className="flow-arrow">→</div>
@@ -194,49 +194,49 @@ export default function App() {
           <div className="flow-step">
             <div className="flow-num">5</div>
             <div className="flow-text">
-              <strong>Receive</strong>
-              <span>Data released + logged to HCS audit trail</span>
+              <strong>Alpha</strong>
+              <span>Data ingested + logged to HCS audit trail</span>
             </div>
           </div>
         </div>
       </div>
 
       <div className="ecosystem-section">
-        <h2>Merchant Ecosystem</h2>
+        <h2>Trading Ecosystem</h2>
         <div className="ecosystem-grid">
           <div className="eco-card">
-            <div className="eco-category">AI &amp; Inference</div>
-            <div className="eco-items">OpenAI Proxy · Photo Gen APIs</div>
+            <div className="eco-category">Market Data</div>
+            <div className="eco-items">Crypto Prices · Order Books · OHLCV</div>
           </div>
           <div className="eco-card">
-            <div className="eco-category">Financial</div>
-            <div className="eco-items">SaucerSwap · Stripe Proxy · Memejob</div>
+            <div className="eco-category">Sentiment</div>
+            <div className="eco-items">Social Sentiment · News Feeds · Fear/Greed</div>
           </div>
           <div className="eco-card">
-            <div className="eco-category">Oracles &amp; Data</div>
-            <div className="eco-items">Pyth Network · Chainlink</div>
+            <div className="eco-category">Compliance</div>
+            <div className="eco-items">KYC/AML · Tax Rates · Regulatory Data</div>
           </div>
           <div className="eco-card">
-            <div className="eco-category">Identity &amp; Compliance</div>
-            <div className="eco-items">Terminal 3 (T3N) · S3 Marketplace</div>
+            <div className="eco-category">ESG &amp; Macro</div>
+            <div className="eco-items">Carbon Credits · On-chain Analytics · Oracles</div>
           </div>
         </div>
       </div>
 
       <div className="chat-section">
-        <h2>Agent Chat</h2>
+        <h2>Alpha Terminal</h2>
         <div className="chat-box">
           <div className="chat-messages">
             {messages.length === 0 && (
               <div className="empty-audit">
-                Ask the agent to fetch real data &mdash; it pays USDC via x402 on Hedera.
+                Ask the agent for market data &mdash; it pays USDC via x402 on Hedera.
                 <br />
                 <br />
-                <strong>Algorithmic trading:</strong> "Get me bitcoin price and sentiment"<br />
-                <strong>Compliance:</strong> "Tax rates in Germany for digital services"<br />
-                <strong>Supply chain:</strong> "Show me verified carbon credits in Brazil"<br />
-                <strong>Research:</strong> "Latest headlines on fed rate decisions"<br />
-                <strong>Direct merchant:</strong> "Fetch data from any x402-protected API"
+                <strong>Trading:</strong> "Get me BTC price and ETH sentiment"<br />
+                <strong>Macro:</strong> "Fed rate decision impact on crypto"<br />
+                <strong>Compliance:</strong> "Tax rates in Germany for digital assets"<br />
+                <strong>ESG:</strong> "Verified carbon credit prices in Brazil"<br />
+                <strong>Direct:</strong> "Fetch data from any x402-protected API"
               </div>
             )}
             {messages.map((msg, i) => (
@@ -268,7 +268,7 @@ export default function App() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="e.g. Get me the ETH price, or tax rates in Japan..."
+              placeholder="e.g. BTC price, sentiment analysis, tax rates..."
               disabled={loading}
             />
             <button onClick={sendMessage} disabled={loading || !input.trim()}>
@@ -283,7 +283,7 @@ export default function App() {
         <div className="audit-list">
           {auditEntries.length === 0 ? (
             <div className="empty-audit">
-              No payments yet. Chat with the agent to see audit entries here.
+              No trades yet. Chat with the agent to see execution logs here.
             </div>
           ) : (
             auditEntries
@@ -318,8 +318,8 @@ export default function App() {
       </div>
 
       <div className="footer">
-        pay-agent &mdash; Autonomous USDC Micropayments for Agentic Commerce &mdash;
-        x402 on Hedera &mdash; Every payment logged to HCS
+        Precision Alpha &mdash; Autonomous USDC Trading Agent on Hedera &mdash;
+        x402 Micropayments &mdash; Every trade logged to HCS
       </div>
     </div>
   );
