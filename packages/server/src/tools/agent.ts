@@ -130,10 +130,16 @@ export function createAgent() {
   const client = createHederaClient();
   const toolkit = createToolkit(client);
 
+  const ollamaHeaders: Record<string, string> = {};
+  if (config.ollama.apiKey) {
+    ollamaHeaders["Authorization"] = `Bearer ${config.ollama.apiKey}`;
+  }
+
   const llm = new ChatOllama({
     baseUrl: config.ollama.baseUrl,
     model: config.ollama.model,
     temperature: 0,
+    headers: ollamaHeaders,
   });
 
   const hederaTools = toolkit.getTools();
