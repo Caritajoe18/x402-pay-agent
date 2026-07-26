@@ -116,9 +116,9 @@ export default function App() {
           pay<span>-agent</span>
         </h1>
         <p>
-          AI agents pay per API call via x402 on Hedera. No subscriptions, no
-          API keys &mdash; just request, pay, receive. Every payment logged to
-          HCS.
+          Autonomous AI agent that discovers, pays for, and consumes data from
+          x402-protected APIs on Hedera. A universal browser for machine
+          commerce &mdash; no subscriptions, no API keys.
           <span className="badge badge-hedera" style={{ marginLeft: 8 }}>
             hedera:testnet
           </span>
@@ -154,13 +154,13 @@ export default function App() {
       </div>
 
       <div className="flow-section">
-        <h2>How It Works</h2>
+        <h2>The Universal Handshake</h2>
         <div className="flow-steps">
           <div className="flow-step">
             <div className="flow-num">1</div>
             <div className="flow-text">
-              <strong>Request</strong>
-              <span>Agent asks for data via chat</span>
+              <strong>Discover</strong>
+              <span>Agent identifies a target merchant endpoint</span>
             </div>
           </div>
           <div className="flow-arrow">→</div>
@@ -168,24 +168,54 @@ export default function App() {
             <div className="flow-num">2</div>
             <div className="flow-text">
               <strong>402</strong>
-              <span>Server returns payment requirements</span>
+              <span>Merchant returns HTTP 402 + PaymentRequirements</span>
             </div>
           </div>
           <div className="flow-arrow">→</div>
           <div className="flow-step">
             <div className="flow-num">3</div>
             <div className="flow-text">
-              <strong>Pay</strong>
-              <span>Facilitator settles HBAR on Hedera</span>
+              <strong>Sign</strong>
+              <span>Agent signs Hedera TransferTransaction</span>
             </div>
           </div>
           <div className="flow-arrow">→</div>
           <div className="flow-step">
             <div className="flow-num">4</div>
             <div className="flow-text">
-              <strong>Receive</strong>
-              <span>Data returned + logged to HCS</span>
+              <strong>Settle</strong>
+              <span>Blocky402 validates &amp; submits to Hedera</span>
             </div>
+          </div>
+          <div className="flow-arrow">→</div>
+          <div className="flow-step">
+            <div className="flow-num">5</div>
+            <div className="flow-text">
+              <strong>Receive</strong>
+              <span>Data released + logged to HCS audit trail</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="ecosystem-section">
+        <h2>Merchant Ecosystem</h2>
+        <div className="ecosystem-grid">
+          <div className="eco-card">
+            <div className="eco-category">AI &amp; Inference</div>
+            <div className="eco-items">OpenAI Proxy · Photo Gen APIs</div>
+          </div>
+          <div className="eco-card">
+            <div className="eco-category">Financial</div>
+            <div className="eco-items">SaucerSwap · Stripe Proxy · Memejob</div>
+          </div>
+          <div className="eco-card">
+            <div className="eco-category">Oracles &amp; Data</div>
+            <div className="eco-items">Pyth Network · Chainlink</div>
+          </div>
+          <div className="eco-card">
+            <div className="eco-category">Identity &amp; Compliance</div>
+            <div className="eco-items">Terminal 3 (T3N) · S3 Marketplace</div>
           </div>
         </div>
       </div>
@@ -202,7 +232,8 @@ export default function App() {
                 <strong>Algorithmic trading:</strong> "Get me bitcoin price and sentiment"<br />
                 <strong>Compliance:</strong> "Tax rates in Germany for digital services"<br />
                 <strong>Supply chain:</strong> "Show me verified carbon credits in Brazil"<br />
-                <strong>Research:</strong> "Latest headlines on fed rate decisions"
+                <strong>Research:</strong> "Latest headlines on fed rate decisions"<br />
+                <strong>Direct merchant:</strong> "Fetch data from any x402-protected API"
               </div>
             )}
             {messages.map((msg, i) => (
@@ -284,8 +315,8 @@ export default function App() {
       </div>
 
       <div className="footer">
-        pay-agent &mdash; Hedera x402 Bounty Submission &mdash; Every payment
-        logged to HCS
+        pay-agent &mdash; Autonomous Micropayments for Agentic Commerce &mdash;
+        x402 on Hedera &mdash; Every payment logged to HCS
       </div>
     </div>
   );
