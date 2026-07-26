@@ -1,4 +1,5 @@
-import { paymentMiddlewareFromConfig } from "@x402/express";
+import { paymentMiddleware } from "@x402/express";
+import { x402ResourceServer } from "@x402/core/server";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactHederaScheme } from "@x402/hedera/exact/server";
 import { config } from "./config.js";
@@ -9,13 +10,15 @@ export function createX402Middleware() {
     url: config.facilitator.url,
   });
 
-  const hederaScheme = new ExactHederaScheme();
+  const server = new x402ResourceServer(facilitatorClient).register(
+    "hedera:*",
+    new ExactHederaScheme()
+  );
+
   const routes = buildX402Routes(config.hedera.accountId);
 
-  return paymentMiddlewareFromConfig(
-    routes,
-    [facilitatorClient],
-    [{ network: "hedera:testnet", server: hederaScheme }],
-    { appName: "pay-agent", testnet: true }
-  );
+  return paymentMiddleware(routes, server, {
+    appName: "pay-agent",
+    testnet: true,
+  });
 }
