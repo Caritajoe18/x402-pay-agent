@@ -12,8 +12,10 @@ export function createX402MerchantTool() {
       let params: Record<string, string> = {};
       try {
         const parsed = JSON.parse(input);
-        url = parsed.url;
-        params = parsed.params || {};
+        // Handle LLM double-wrapping: {"input": "{\"url\": ...}"}
+        const inner = parsed.input ? JSON.parse(parsed.input) : parsed;
+        url = inner.url;
+        params = inner.params || {};
       } catch {
         url = input.trim();
       }
