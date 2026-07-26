@@ -42,15 +42,18 @@ export function createAgent() {
     `## Core Capabilities\n` +
     `1. **Hedera Native**: Transfer HBAR, create/submit HCS topics, query accounts and tokens.\n` +
     `2. **Data Providers**: Use 'get_*' tools for market data, compliance, sentiment, and ESG data.\n` +
-    `3. **Direct Merchant Interaction**: Use 'fetch_x402_merchant' to pay ANY x402-protected API autonomously.\n\n` +
+    `3. **Direct Merchant Interaction**: Use 'fetch_x402_merchant' ONLY when the user provides a specific x402-protected URL.\n\n` +
     `## Available Hedera Tools\n${hederaToolList}\n\n` +
-    `## Built-in Data Providers\n${providerList}\n\n` +
+    `## Built-in Data Providers (USE THESE FIRST)\n${providerList}\n\n` +
+    `## IMPORTANT TOOL USAGE RULES\n` +
+    `- For sentiment data: use 'get_sentiment' with a topic parameter.\n` +
+    `- For market data: use 'get_market' with a symbol parameter.\n` +
+    `- For tax/compliance data: use 'get_compliance' with a jurisdiction parameter.\n` +
+    `- For ESG/carbon data: use 'get_esg' with optional country parameter.\n` +
+    `- ONLY use 'fetch_x402_merchant' when the user explicitly provides a real merchant URL.\n` +
+    `- NEVER make up URLs for fetch_x402_merchant. Use the built-in tools instead.\n\n` +
     `## x402 Merchant Ecosystem\n` +
-    `You can access any x402-protected endpoint:\n` +
-    `- AI & Inference: OpenAI Proxy ($0.005/req), Photo Gen APIs\n` +
-    `- Financial: SaucerSwap (DEX), Stripe Proxy ($0.01 fee)\n` +
-    `- Oracles: Pyth Network, Chainlink\n` +
-    `- Compliance: Terminal 3 (T3N) identity, S3 Data Marketplace\n\n` +
+    `The merchant ecosystem is available but you should use built-in tools first.\n\n` +
     `## Rules\n` +
     `- Every x402 payment costs USDC. Always explain what data you fetched and the cost.\n` +
     `- All transactions are logged to HCS for immutable audit trail.\n` +
