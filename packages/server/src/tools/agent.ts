@@ -3,6 +3,8 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { DynamicTool } from "@langchain/core/tools";
 import { config } from "../config.js";
 import { listProviders } from "../providers/registry.js";
+import { getFetchWithPayment } from "../x402-client.js";
+import { logToHcs } from "../hedera.js";
 
 const PORT = config.port;
 
@@ -13,20 +15,18 @@ export function createAgent() {
     temperature: 0,
   });
 
-  // Build tools dynamically from registered providers
   const providerMeta = listProviders();
-  const tools = providerMeta.map(
+
+  const builtinTools = providerMeta.map(
     (p) =>
       new DynamicTool({
         name: `get_${p.slug}`,
         description: `${p.description}. Costs ${p.price} per call via x402 micropayment. Input: ${p.params.map((param) => `${param.name} (${param.description}${param.required ? "" : ", optional"})`).join(", ")}.`,
         func: async (input: string) => {
-          // Parse input — support JSON or plain string (first param)
           let params: Record<string, string>;
           try {
             params = JSON.parse(input);
           } catch {
-            // Treat as first required param value
             const firstParam = p.params[0];
             params = { [firstParam.name]: input };
           }
@@ -40,6 +40,63 @@ export function createAgent() {
       })
   );
 
+  const fetchMerchantTool = new DynamicTool({
+    name: "fetch_merchant_data",
+    description:
+      "Fetch data from any x402-protected merchant endpoint. The agent autonomously handles the full x402 handshake: receives the 402 challenge, signs a Hedera TransferTransaction, settles via Blocky402 facilitator, and receives the data. Input: a JSON object with 'url' (the merchant endpoint) and optional 'params' (query parameters). Example: {\"url\": \"https://api.merchant.com/v1/data\", \"params\": {\"symbol\": \"AAPL\"}}",
+    func: async (input: string) => {
+      let url: string;
+      let params: Record<string, string> = {};
+      try {
+        const parsed = JSON.parse(input);
+        url = parsed.url;
+        params = parsed.params || {};
+      } catch {
+        url = input.trim();
+      }
+
+      if (!url) return JSON.stringify({ error: "url is required" });
+
+      const qs = new URLSearchParams(params).toString();
+      const fullUrl = qs ? `${url}?${qs}` : url;
+
+      try {
+        const fetchWithPayment = getFetchWithPayment();
+        const res = await fetchWithPayment(fullUrl);
+        const status = res.status;
+        const body = await res.json().catch(() => null);
+
+        const settlement = res.headers.get("x-payment-response");
+        let settlementInfo = null;
+        if (settlement) {
+          try {
+            settlementInfo = JSON.parse(
+              atob(settlement)
+            );
+          } catch { /* skip */ }
+        }
+
+        await logToHcs({
+          event: "x402_merchant_purchase",
+          url: fullUrl,
+          status,
+          settlement: settlementInfo,
+          timestamp: new Date().toISOString(),
+        });
+
+        return JSON.stringify({
+          status,
+          data: body,
+          settlement: settlementInfo,
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return JSON.stringify({ error: msg });
+      }
+    },
+  });
+
+  const tools = [...builtinTools, fetchMerchantTool];
   const llmWithTools = llm.bindTools(tools);
 
   const providerList = providerMeta
@@ -47,11 +104,23 @@ export function createAgent() {
     .join("\n");
 
   const SYSTEM_PROMPT =
-    `You are pay-agent, an AI assistant that purchases real data using x402 micropayments on Hedera.\n\n` +
-    `You have access to the following data providers:\n${providerList}\n\n` +
-    `Each tool call costs a small amount of HBAR via x402. Use the tools when the user asks for real data.\n` +
-    `Always explain what data you fetched and how much it cost.\n` +
-    `If a tool fails, explain the error and suggest what the user could try.`;
+    `You are pay-agent, an autonomous AI agent that purchases real data using x402 micropayments on Hedera.\n\n` +
+    `## Core Capability\n` +
+    `You are an independent economic actor. You can:\n` +
+    "1. Use built-in data providers (tools prefixed with 'get_') for market data, compliance, sentiment, and ESG data.\n" +
+    "2. Use 'fetch_merchant_data' to pay ANY x402-protected merchant endpoint autonomously. You handle the full x402 handshake — the merchant returns HTTP 402, you sign a Hedera transfer, Blocky402 settles it, and you receive the data.\n\n" +
+    `## Built-in Providers\n${providerList}\n\n` +
+    `## Direct Merchant Interaction\n` +
+    `When a user asks for data not covered by built-in providers, use 'fetch_merchant_data' to interact with any x402-protected API. You can access:\n` +
+    `- AI & Inference: OpenAI Proxy ($0.005/req), Photo Generation APIs\n` +
+    `- Financial: SaucerSwap (DEX), Stripe Proxy ($0.01 fee), Memejob\n` +
+    `- Oracles: Pyth Network, Chainlink\n` +
+    `- Compliance: Terminal 3 (T3N) identity verification, S3 Data Marketplace\n\n` +
+    `## Rules\n` +
+    `- Every tool call costs HBAR via x402. Always explain what data you fetched and the cost.\n` +
+    `- All transactions are logged to HCS for immutable audit trail.\n` +
+    `- If a tool fails, explain the error and suggest alternatives.\n` +
+    `- Be concise. Return structured data when possible.`;
 
   async function chat(
     userMessage: string
