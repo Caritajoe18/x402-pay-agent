@@ -1,3 +1,9 @@
+import { Client, PrivateKey } from "@hiero-ledger/sdk";
+import { AgentMode } from "@hashgraph/hedera-agent-kit";
+import { allCorePlugins } from "@hashgraph/hedera-agent-kit/plugins";
+import { HcsAuditTrailHook } from "@hashgraph/hedera-agent-kit/hooks";
+import { RejectToolPolicy } from "@hashgraph/hedera-agent-kit/policies";
+import { HederaLangchainToolkit } from "@hashgraph/hedera-agent-kit-langchain";
 import { ChatOllama } from "@langchain/ollama";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { DynamicTool } from "@langchain/core/tools";
@@ -8,16 +14,44 @@ import { logToHcs } from "../hedera.js";
 
 const PORT = config.port;
 
-export function createAgent() {
-  const llm = new ChatOllama({
-    baseUrl: config.ollama.baseUrl,
-    model: config.ollama.model,
-    temperature: 0,
+function createHederaClient(): Client {
+  const client = Client.forTestnet();
+  const key = config.hedera.privateKey;
+  const privateKey = key.startsWith("30")
+    ? PrivateKey.fromStringDer(key)
+    : PrivateKey.fromStringECDSA(key);
+  client.setOperator(config.hedera.accountId, privateKey);
+  return client;
+}
+
+function createToolkit(client: Client) {
+  const auditHook = new HcsAuditTrailHook(
+    ["fetch_x402_merchant", "submit_topic_message_tool"],
+    config.hcs.topicId,
+    client
+  );
+
+  const rejectPolicy = new RejectToolPolicy([
+    "delete_account_tool",
+    "delete_topic_tool",
+  ]);
+
+  return new HederaLangchainToolkit({
+    client,
+    configuration: {
+      plugins: allCorePlugins,
+      context: {
+        mode: AgentMode.AUTONOMOUS,
+        accountId: config.hedera.accountId,
+        hooks: [auditHook, rejectPolicy],
+      },
+    },
   });
+}
 
+function createBuiltinProviderTools() {
   const providerMeta = listProviders();
-
-  const builtinTools = providerMeta.map(
+  return providerMeta.map(
     (p) =>
       new DynamicTool({
         name: `get_${p.slug}`,
@@ -30,7 +64,6 @@ export function createAgent() {
             const firstParam = p.params[0];
             params = { [firstParam.name]: input };
           }
-
           const query = new URLSearchParams(params).toString();
           const resp = await fetch(
             `http://localhost:${PORT}/api/data/${p.slug}?${query}`
@@ -39,11 +72,13 @@ export function createAgent() {
         },
       })
   );
+}
 
-  const fetchMerchantTool = new DynamicTool({
-    name: "fetch_merchant_data",
+function createX402MerchantTool() {
+  return new DynamicTool({
+    name: "fetch_x402_merchant",
     description:
-      "Fetch data from any x402-protected merchant endpoint. The agent autonomously handles the full x402 handshake: receives the 402 challenge, signs a Hedera TransferTransaction, settles via Blocky402 facilitator, and receives the data. Input: a JSON object with 'url' (the merchant endpoint) and optional 'params' (query parameters). Example: {\"url\": \"https://api.merchant.com/v1/data\", \"params\": {\"symbol\": \"AAPL\"}}",
+      "Fetch data from any x402-protected merchant endpoint. Autonomously handles the full x402 handshake: receives the 402 challenge, signs a Hedera TransferTransaction, settles via Blocky402 facilitator, and receives the data. Input: JSON with 'url' (merchant endpoint) and optional 'params' (query parameters).",
     func: async (input: string) => {
       let url: string;
       let params: Record<string, string> = {};
@@ -66,13 +101,11 @@ export function createAgent() {
         const status = res.status;
         const body = await res.json().catch(() => null);
 
-        const settlement = res.headers.get("x-payment-response");
-        let settlementInfo = null;
-        if (settlement) {
+        const settlementHeader = res.headers.get("x-payment-response");
+        let settlement = null;
+        if (settlementHeader) {
           try {
-            settlementInfo = JSON.parse(
-              atob(settlement)
-            );
+            settlement = JSON.parse(atob(settlementHeader));
           } catch { /* skip */ }
         }
 
@@ -80,44 +113,62 @@ export function createAgent() {
           event: "x402_merchant_purchase",
           url: fullUrl,
           status,
-          settlement: settlementInfo,
+          settlement,
           timestamp: new Date().toISOString(),
         });
 
-        return JSON.stringify({
-          status,
-          data: body,
-          settlement: settlementInfo,
-        });
+        return JSON.stringify({ status, data: body, settlement });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return JSON.stringify({ error: msg });
       }
     },
   });
+}
 
-  const tools = [...builtinTools, fetchMerchantTool];
-  const llmWithTools = llm.bindTools(tools);
+export function createAgent() {
+  const client = createHederaClient();
+  const toolkit = createToolkit(client);
 
+  const llm = new ChatOllama({
+    baseUrl: config.ollama.baseUrl,
+    model: config.ollama.model,
+    temperature: 0,
+  });
+
+  const hederaTools = toolkit.getTools();
+  const builtinTools = createBuiltinProviderTools();
+  const x402Tool = createX402MerchantTool();
+  const allDynamicTools = [...builtinTools, x402Tool];
+  const allTools = [...hederaTools, ...allDynamicTools];
+  const llmWithTools = llm.bindTools(allDynamicTools);
+
+  const providerMeta = listProviders();
   const providerList = providerMeta
     .map((p) => `- ${p.slug}: ${p.description} (${p.price}/call)`)
     .join("\n");
 
+  const hederaToolList = hederaTools
+    .map((t) => `- ${t.name}: ${t.description}`)
+    .join("\n");
+
   const SYSTEM_PROMPT =
-    `You are pay-agent, an autonomous AI agent that purchases real data using x402 micropayments on Hedera.\n\n` +
-    `## Core Capability\n` +
-    `You are an independent economic actor. You can:\n` +
-    "1. Use built-in data providers (tools prefixed with 'get_') for market data, compliance, sentiment, and ESG data.\n" +
-    "2. Use 'fetch_merchant_data' to pay ANY x402-protected merchant endpoint autonomously. You handle the full x402 handshake — the merchant returns HTTP 402, you sign a Hedera transfer, Blocky402 settles it, and you receive the data.\n\n" +
-    `## Built-in Providers\n${providerList}\n\n` +
-    `## Direct Merchant Interaction\n` +
-    `When a user asks for data not covered by built-in providers, use 'fetch_merchant_data' to interact with any x402-protected API. You can access:\n` +
-    `- AI & Inference: OpenAI Proxy ($0.005/req), Photo Generation APIs\n` +
-    `- Financial: SaucerSwap (DEX), Stripe Proxy ($0.01 fee), Memejob\n` +
+    `You are pay-agent, an autonomous AI agent built on the Hedera Agent Kit.\n` +
+    `You function as an independent economic actor on the Hedera testnet.\n\n` +
+    `## Core Capabilities\n` +
+    `1. **Hedera Native**: Transfer HBAR, create/submit HCS topics, query accounts and tokens.\n` +
+    `2. **Data Providers**: Use 'get_*' tools for market data, compliance, sentiment, and ESG data.\n` +
+    `3. **Direct Merchant Interaction**: Use 'fetch_x402_merchant' to pay ANY x402-protected API autonomously.\n\n` +
+    `## Available Hedera Tools\n${hederaToolList}\n\n` +
+    `## Built-in Data Providers\n${providerList}\n\n` +
+    `## x402 Merchant Ecosystem\n` +
+    `You can access any x402-protected endpoint:\n` +
+    `- AI & Inference: OpenAI Proxy ($0.005/req), Photo Gen APIs\n` +
+    `- Financial: SaucerSwap (DEX), Stripe Proxy ($0.01 fee)\n` +
     `- Oracles: Pyth Network, Chainlink\n` +
-    `- Compliance: Terminal 3 (T3N) identity verification, S3 Data Marketplace\n\n` +
+    `- Compliance: Terminal 3 (T3N) identity, S3 Data Marketplace\n\n` +
     `## Rules\n` +
-    `- Every tool call costs HBAR via x402. Always explain what data you fetched and the cost.\n` +
+    `- Every x402 payment costs HBAR. Always explain what data you fetched and the cost.\n` +
     `- All transactions are logged to HCS for immutable audit trail.\n` +
     `- If a tool fails, explain the error and suggest alternatives.\n` +
     `- Be concise. Return structured data when possible.`;
@@ -142,7 +193,7 @@ export function createAgent() {
     }> = [];
 
     for (const tc of toolCalls) {
-      const tool = tools.find((t) => t.name === tc.name);
+      const tool = allDynamicTools.find((t) => t.name === tc.name);
       if (tool) {
         const input =
           typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args);

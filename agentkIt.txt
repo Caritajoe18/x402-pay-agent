@@ -1,0 +1,69 @@
+This consolidated **llm.txt** technical specification details the architecture of **pay-agent** with a specific focus on its integration with the **Hedera Agent Kit (v4)** to enable autonomous x402 commerce.
+
+***
+
+# **llm.txt: pay-agent Technical Specification**
+
+## **1. Project Identity & Goal**
+**pay-agent** is an autonomous AI agent built using the **Hedera Agent Kit (v4)** and **LangChain**. Its primary purpose is to function as an independent economic actor capable of discovering and purchasing access to **x402-protected APIs** (e.g., AI inference, data feeds) on the Hedera testnet. Every transaction is autonomously settled and logged to an immutable **Hedera Consensus Service (HCS)** audit trail.
+
+---
+
+## **2. Core Architecture: Orchestration & Governance**
+The Hedera Agent Kit provides the essential infrastructure for autonomy, tool orchestration, and risk management.
+
+### **A. Toolkit Configuration**
+The agent must be initialized with the `HederaLangchainToolkit` in **`AgentMode.AUTONOMOUS`** to allow for background voucher signing and transaction execution without human prompts.
+*   **Key Requirement**: The operator account **must use an ECDSA (secp256k1) key** to support the EIP-712 signing used in advanced Machine Payments Protocol (MPP) flows.
+
+### **B. Tool Integration (BaseTool Implementation)**
+To leverage the kit's governance layer, every merchant-specific tool must extend **`BaseTool`**. This ensures the tool automatically participates in the **7-stage lifecycle** (Stages 1-7) required for hook and policy enforcement.
+*   **x402 Wrapper**: Use `wrapFetchWithPayment` from `@x402/fetch` inside the tool's `handleTransaction()` logic to detect **402 challenges** and autonomously trigger settlement via the **Blocky402 facilitator**.
+
+---
+
+## **3. Integrated Policy Layer**
+Following the **Hedera Policy Agent** bounty requirements, the agent is restricted by code-level guardrails rather than just prompt instructions.
+
+### **A. Safety Policies**
+*   **`RejectToolPolicy`**: Configured to explicitly block destructive tools such as `delete_account_tool` or `delete_topic_tool`.
+*   **`MaxSpendPolicy` (Custom)**: Intercepts execution at **Stage 3 (Post-Parameter Normalization)**. It inspects the `maxAmount` of an MPP fetch or the `hbarTransfers` total to block any single transaction exceeding a defined corporate threshold (e.g., $0.10) [Conversation History, 142].
+
+### **B. Audit Hook**
+*   **`HcsAuditTrailHook`**: Registered in the `configuration.context.hooks` array.
+*   **Function**: Captures transaction IDs, provider names, and timestamps for every successful or blocked purchase and submits them as messages to a dedicated **HCS Topic**.
+
+---
+
+## **4. Real-World Inference Ecosystem**
+The agent is designed to interact with professional **Inference Merchants** converted into x402-compliant endpoints:
+*   **OpenAI Proxy**: `POST /openai/v1/chat/completions` (Price: $0.005).
+*   **Image Generation**: `POST /image-gen/v1/generate` (Price: $0.01).
+*   **Streaming AI**: `POST /openai/v1/completions` (Price: $0.0001 / token).
+
+---
+
+## **5. Technical Stack & Environment**
+*   **Network**: `hedera:testnet` (CAIP-2).
+*   **Assets**: Native **HBAR** (asset 0.0.0) and **USDC** (Token ID: 0.0.429274).
+*   **Facilitator**: **Blocky402** (Testnet: `https://api.testnet.blocky402.com`) — Handles fee-paying and network submission so merchants stay "blockchain-blind".
+*   **SDK Dependencies**:
+    *   `@hashgraph/hedera-agent-kit`: Core architecture.
+    *   `@hashgraph/hedera-agent-kit-langchain`: Agent kit adapter.
+    *   `@x402/hedera`: Exact settlement logic.
+    *   `@hiero-ledger/sdk`: Native Hedera interactions (HCS/HTS).
+
+---
+
+## **6. Integration Roadmap for Developers**
+1.  **Monorepo Structure**: Separate concern between `/apps/agent` (Kit-powered logic) and `/apps/web` (HCS audit visualization).
+2.  **Hook Registration**: Ensure `safetyPolicy`, `spendLimit`, and `auditTrailHook` are injected into the toolkit configuration context.
+3.  **Discovery**: Use the agent's reasoning to discover merchant endpoints dynamically via the provider registry or known MPP proxy routes.
+4.  **Audit Verification**: Provide users with **HashScan** links to the HCS messages for immutable verification of spent budget.
+
+***
+
+**Essential Links:**
+*   **Bounty Info**: [hedera.com/x402-bounty](https://hedera.com/x402-bounty).
+*   **Facilitator Docs**: [blocky402.com/docs](https://blocky402.com/docs/).
+*   **Kit Repo**: [github.com/hashgraph/hedera-agent-kit-js](https://github.com/hashgraph/hedera-agent-kit-js).
