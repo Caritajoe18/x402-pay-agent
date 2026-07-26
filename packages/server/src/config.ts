@@ -18,6 +18,10 @@ export const config = {
     accountId: required("HEDERA_ACCOUNT_ID"),
     privateKey: required("HEDERA_PRIVATE_KEY"),
   },
+  hederaClient: {
+    accountId: process.env.HEDERA_CLIENT_ID || required("HEDERA_ACCOUNT_ID"),
+    privateKey: process.env.HEDERA_CLIENT_KEY || required("HEDERA_PRIVATE_KEY"),
+  },
   hcs: {
     topicId: process.env.HCS_TOPIC_ID || "",
   },
