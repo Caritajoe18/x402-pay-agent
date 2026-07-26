@@ -26,6 +26,7 @@ export function createAgent() {
   const providerTools = createProviderTools();
   const x402Tool = createX402MerchantTool();
   const dynamicTools = [...providerTools, x402Tool];
+  console.log("[agent] Dynamic tools:", dynamicTools.map((t) => t.name));
   const llmWithTools = llm.bindTools(dynamicTools);
 
   const providerList = listProviders()
