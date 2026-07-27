@@ -288,6 +288,11 @@ header p {
   margin-bottom: 1rem;
 }
 
+.audit-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .audit-btn {
   background: transparent;
   color: var(--accent);
@@ -304,6 +309,10 @@ header p {
 .audit-btn:hover {
   background: var(--accent);
   color: var(--bg);
+}
+
+.audit-btn-link {
+  text-decoration: none;
 }
 
 .audit-list {

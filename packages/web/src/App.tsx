@@ -313,9 +313,21 @@ export default function App() {
       <div className="audit-section">
         <div className="audit-header">
           <h2>HCS Audit Trail</h2>
-          <button className="audit-btn" onClick={loadAudit}>
-            Fetch Audit
-          </button>
+          <div className="audit-actions">
+            <button className="audit-btn" onClick={loadAudit}>
+              Fetch Audit
+            </button>
+            {hcsTopicId && (
+              <a
+                href={`https://hashscan.io/testnet/topic/${hcsTopicId}/messages`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="audit-btn audit-btn-link"
+              >
+                View on HashScan ↗
+              </a>
+            )}
+          </div>
         </div>
         <div className="audit-list">
           {auditEntries.length === 0 ? (
