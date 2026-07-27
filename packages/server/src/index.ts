@@ -34,6 +34,7 @@ app.get("/health", (_req, res) => {
     status: "ok",
     network: "hedera:testnet",
     payTo: config.hedera.accountId,
+    topicId: config.hcs.topicId,
   });
 });
 
