@@ -3,6 +3,7 @@ import providersRoutes from "./providers.js";
 import dataRoutes from "./data.js";
 import auditRoutes from "./audit.js";
 import chatRoutes from "./chat.js";
+import marketplaceRoutes from "./marketplace.js";
 
 const router: RouterType = Router();
 
@@ -10,5 +11,6 @@ router.use(providersRoutes);
 router.use(dataRoutes);
 router.use(auditRoutes);
 router.use(chatRoutes);
+router.use(marketplaceRoutes);
 
 export default router;
