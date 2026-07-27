@@ -112,15 +112,22 @@ export function createAgent() {
 
     let finalReply: string;
     if (toolResults.length > 0) {
-      const finalResponse = await llmWithTools.invoke(messages);
-      console.log("[agent] Final LLM response:", JSON.stringify({
-        content: finalResponse.content,
-        tool_calls: finalResponse.tool_calls,
-      }));
-      finalReply =
-        typeof finalResponse.content === "string"
-          ? finalResponse.content
-          : JSON.stringify(finalResponse.content);
+      try {
+        const finalResponse = await llmWithTools.invoke(messages);
+        console.log("[agent] Final LLM response:", JSON.stringify({
+          content: finalResponse.content,
+          tool_calls: finalResponse.tool_calls,
+        }));
+        finalReply =
+          typeof finalResponse.content === "string"
+            ? finalResponse.content
+            : JSON.stringify(finalResponse.content);
+      } catch (err) {
+        console.error("[agent] Final LLM call failed:", err);
+        finalReply = toolResults
+          .map((r) => `${r.tool}: ${r.result}`)
+          .join("\n\n");
+      }
     } else {
       finalReply =
         typeof response.content === "string"

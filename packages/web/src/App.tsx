@@ -107,11 +107,16 @@ export default function App() {
         body: JSON.stringify({ message: text }),
       });
       const data = await res.json();
+      const agentText = data.reply || data.error || (data.toolCalls?.length
+        ? data.toolCalls.map((tc: { tool: string; result: unknown }) =>
+            `${tc.tool}: ${typeof tc.result === "string" ? tc.result : JSON.stringify(tc.result, null, 2)}`
+          ).join("\n\n")
+        : "No response");
       setMessages((prev) => [
         ...prev,
         {
           role: "agent",
-          text: data.reply || data.error || "No response",
+          text: agentText,
           toolCalls: data.toolCalls,
         },
       ]);
