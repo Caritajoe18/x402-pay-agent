@@ -14,9 +14,18 @@ export function createProviderTools() {
           try {
             params = JSON.parse(input);
           } catch {
-            const firstParam = p.params[0];
-            params = { [firstParam.name]: input };
+            params = {};
           }
+
+          // Map 'input' key to first required param if needed
+          if (params.input && !p.params.some((pp) => pp.name in params)) {
+            const firstRequired = p.params.find((pp) => pp.required);
+            if (firstRequired) {
+              params[firstRequired.name] = params.input;
+              delete params.input;
+            }
+          }
+
           const query = new URLSearchParams(params).toString();
           const resp = await fetch(
             `http://localhost:${config.port}/api/data/${p.slug}?${query}`
