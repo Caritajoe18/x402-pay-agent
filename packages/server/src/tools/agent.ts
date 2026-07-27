@@ -25,9 +25,9 @@ export function createAgent() {
   const hederaTools = toolkit.getTools();
   const providerTools = createProviderTools();
   const x402Tool = createX402MerchantTool();
-  const dynamicTools = [...providerTools, x402Tool];
-  console.log("[agent] Dynamic tools:", dynamicTools.map((t) => t.name));
-  const llmWithTools = llm.bindTools(dynamicTools);
+  const allTools = [...hederaTools, ...providerTools, x402Tool];
+  console.log("[agent] All tools:", allTools.map((t) => t.name));
+  const llmWithTools = llm.bindTools(allTools);
 
   const providerList = listProviders()
     .map((p) => `- ${p.slug}: ${p.description} (${p.price}/call)`)
@@ -85,12 +85,12 @@ export function createAgent() {
     }> = [];
 
     for (const tc of toolCalls) {
-      const tool = dynamicTools.find((t) => t.name === tc.name);
+      const tool = allTools.find((t) => t.name === tc.name);
       if (tool) {
         const input =
           typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args);
         console.log("[agent] Executing tool:", tc.name, "input:", input);
-        const result = await tool.invoke(input);
+        const result = await (tool as unknown as { invoke: (input: string) => Promise<string> }).invoke(input);
         console.log("[agent] Tool result:", result);
         toolResults.push({ tool: tc.name, input, result });
 
