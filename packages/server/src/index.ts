@@ -8,6 +8,7 @@ import { marketProvider } from "./providers/market.js";
 import { complianceProvider } from "./providers/compliance.js";
 import { sentimentProvider } from "./providers/sentiment.js";
 import { esgProvider } from "./providers/esg.js";
+import { weatherProvider } from "./providers/weather.js";
 import { createX402Middleware } from "./x402.js";
 import routes from "./routes/index.js";
 
@@ -16,6 +17,7 @@ registerProvider(marketProvider);
 registerProvider(complianceProvider);
 registerProvider(sentimentProvider);
 registerProvider(esgProvider);
+registerProvider(weatherProvider);
 
 // ── Express ─────────────────────────────────────────────────────────────────
 const app = express();
