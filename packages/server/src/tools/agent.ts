@@ -1,5 +1,6 @@
 import { ChatOllama } from "@langchain/ollama";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { DynamicTool } from "@langchain/core/tools";
 import { config } from "../config.js";
 import { listProviders } from "../providers/registry.js";
 import { createHederaClient, createToolkit } from "./hedera.js";
@@ -90,8 +91,14 @@ export function createAgent() {
         const input =
           typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args);
         console.log("[agent] Executing tool:", tc.name, "input:", input);
-        const parsedInput = typeof tc.args === "string" ? JSON.parse(tc.args) : tc.args;
-        const result = await (tool as unknown as { invoke: (input: unknown) => Promise<string> }).invoke(parsedInput);
+        // DynamicTool expects string, Hedera tools expect object
+        const toolInput =
+          tool instanceof DynamicTool
+            ? input
+            : typeof tc.args === "string"
+              ? JSON.parse(tc.args)
+              : tc.args;
+        const result = await (tool as unknown as { invoke: (input: unknown) => Promise<string> }).invoke(toolInput);
         console.log("[agent] Tool result:", result);
         toolResults.push({ tool: tc.name, input, result });
 
