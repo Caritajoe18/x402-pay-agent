@@ -90,7 +90,8 @@ export function createAgent() {
         const input =
           typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args);
         console.log("[agent] Executing tool:", tc.name, "input:", input);
-        const result = await (tool as unknown as { invoke: (input: string) => Promise<string> }).invoke(input);
+        const parsedInput = typeof tc.args === "string" ? JSON.parse(tc.args) : tc.args;
+        const result = await (tool as unknown as { invoke: (input: unknown) => Promise<string> }).invoke(parsedInput);
         console.log("[agent] Tool result:", result);
         toolResults.push({ tool: tc.name, input, result });
 
