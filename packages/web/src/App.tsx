@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
+const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string | undefined) ?? "";
+
 interface ChatMessage {
   role: "user" | "agent";
   text: string;
@@ -158,7 +160,7 @@ export default function App() {
 
   const loadAudit = async () => {
     try {
-      const healthRes = await fetch("/health");
+      const healthRes = await fetch(`${SERVER_URL}/health`);
       const health = await healthRes.json();
       const topicId = health.hcsTopicId || health.topicId;
       if (!topicId) return;
@@ -203,7 +205,7 @@ export default function App() {
 
   const loadSpend = async () => {
     try {
-      const res = await fetch("/api/spend");
+      const res = await fetch(`${SERVER_URL}/api/spend`);
       const data = await res.json();
       setSpend(data);
     } catch {
@@ -214,11 +216,11 @@ export default function App() {
   useEffect(() => {
     loadAudit();
     loadSpend();
-    fetch("/api/providers")
+    fetch(`${SERVER_URL}/api/providers`)
       .then((r) => r.json())
       .then((d) => setProviders(d.providers || []))
       .catch(() => {});
-    fetch("/api/marketplace")
+    fetch(`${SERVER_URL}/api/marketplace`)
       .then((r) => r.json())
       .then((d) => setMarketplace(d.items || []))
       .catch(() => {});
@@ -233,7 +235,7 @@ export default function App() {
     setLoading(true);
 
     try {
-      const res = await fetch("/chat", {
+      const res = await fetch(`${SERVER_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: prompt }),
