@@ -2,6 +2,12 @@ import { useState, useEffect, useRef } from "react";
 
 const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string | undefined) ?? "";
 
+function consensusToDate(ts: string): Date | null {
+  const secs = Number(ts.split(".")[0]);
+  if (!Number.isFinite(secs)) return null;
+  return new Date(secs * 1000);
+}
+
 interface ChatMessage {
   role: "user" | "agent";
   text: string;
@@ -224,6 +230,8 @@ export default function App() {
       .then((r) => r.json())
       .then((d) => setMarketplace(d.items || []))
       .catch(() => {});
+    const timer = setInterval(loadAudit, 15000);
+    return () => clearInterval(timer);
   }, []);
 
   const sendMessage = async (text?: string) => {
@@ -601,8 +609,6 @@ export default function App() {
             </div>
           ) : (
             auditEntries
-              .slice()
-              .reverse()
               .slice(0, 20)
               .map((entry, i) => (
                 <div key={i} className="audit-entry">
@@ -623,7 +629,9 @@ export default function App() {
                     </a>
                   )}
                   <div className="time">
-                    {new Date(entry.timestamp).toLocaleTimeString()}
+                    {consensusToDate(entry.timestamp)?.toLocaleString(undefined, {
+                      timeZoneName: "short",
+                    }) ?? ""}
                   </div>
                 </div>
               ))
