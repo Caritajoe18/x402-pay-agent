@@ -13,6 +13,8 @@ function required(key: string): string {
   return val;
 }
 
+const port = parseInt(process.env.PORT || "4021", 10);
+
 export const config = {
   hedera: {
     accountId: required("HEDERA_ACCOUNT_ID"),
@@ -36,5 +38,6 @@ export const config = {
   maxSpendUsdc: process.env.MAX_SPEND_USDC
     ? parseFloat(process.env.MAX_SPEND_USDC)
     : null,
-  port: parseInt(process.env.PORT || "4021", 10),
+  publicUrl: process.env.PUBLIC_URL || `http://localhost:${port}`,
+  port,
 } as const;

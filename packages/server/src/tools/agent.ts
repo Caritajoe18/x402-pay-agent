@@ -55,18 +55,18 @@ export function createAgent() {
     `## x402 Pay-per-Query Data Providers (Ref Arch 1)\n` +
     `These endpoints are x402-protected on this server. Use 'fetch_x402_merchant' to pay per query.\n` +
     `Each call costs USDC. No subscription — you only pay for what you read.\n` +
-    `- Market Prices: http://localhost:${config.port}/api/data/market\n` +
-    `- Sentiment Analysis: http://localhost:${config.port}/api/data/sentiment\n` +
-    `- Compliance Check: http://localhost:${config.port}/api/data/compliance\n` +
-    `- ESG Scores: http://localhost:${config.port}/api/data/esg\n` +
-    `- Weather: http://localhost:${config.port}/api/data/weather\n\n` +
+    `- Market Prices: ${config.publicUrl}/api/data/market\n` +
+    `- Sentiment Analysis: ${config.publicUrl}/api/data/sentiment\n` +
+    `- Compliance Check: ${config.publicUrl}/api/data/compliance\n` +
+    `- ESG Scores: ${config.publicUrl}/api/data/esg\n` +
+    `- Weather: ${config.publicUrl}/api/data/weather\n\n` +
     `## x402 Data Marketplace (Ref Arch 2 — PREMIUM DATASETS)\n` +
     `Use 'fetch_x402_merchant' to purchase access to curated premium datasets.\n` +
-    `- BTC On-Chain: http://localhost:${config.port}/api/marketplace/btc-onchain ($0.001)\n` +
-    `- ETH Gas: http://localhost:${config.port}/api/marketplace/eth-gas ($0.001)\n` +
-    `- Macro Indicators: http://localhost:${config.port}/api/marketplace/macro-indicators ($0.005)\n` +
-    `- DeFi TVL: http://localhost:${config.port}/api/marketplace/defi-tvl ($0.003)\n` +
-    `- Fear & Greed: http://localhost:${config.port}/api/marketplace/sentiment-composite ($0.002)\n\n` +
+    `- BTC On-Chain: ${config.publicUrl}/api/marketplace/btc-onchain ($0.001)\n` +
+    `- ETH Gas: ${config.publicUrl}/api/marketplace/eth-gas ($0.001)\n` +
+    `- Macro Indicators: ${config.publicUrl}/api/marketplace/macro-indicators ($0.005)\n` +
+    `- DeFi TVL: ${config.publicUrl}/api/marketplace/defi-tvl ($0.003)\n` +
+    `- Fear & Greed: ${config.publicUrl}/api/marketplace/sentiment-composite ($0.002)\n\n` +
     `## Free Built-in Data Providers\n${providerList}\n\n` +
     `## IMPORTANT SCENARIOS\n` +
     `- Ref Arch 1 (Agent pays per query): User asks about portfolio management, market data, prices, weather. Use 'fetch_x402_merchant' with /api/data/* URLs to pay per query.\n` +
