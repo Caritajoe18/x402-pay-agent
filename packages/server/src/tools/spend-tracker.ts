@@ -1,4 +1,5 @@
-import { DynamicTool } from "@langchain/core/tools";
+import { z } from "zod";
+import { BaseTool } from "@hashgraph/hedera-agent-kit";
 
 type PriceString = string;
 
@@ -68,45 +69,82 @@ class SpendTracker {
 
 export const spendTracker = new SpendTracker();
 
-export function createBudgetTools(): DynamicTool[] {
-  return [
-    new DynamicTool({
-      name: "set_max_spend",
-      description:
-        "Set a maximum total USDC spend limit for x402 payments. Once set, the agent will refuse any purchase that would exceed this budget. Input: JSON with 'amount' (number, in USD e.g. 0.05 for 5 cents). Use 0 or omit to clear the limit.",
-      func: async (input: string) => {
-        try {
-          const parsed = JSON.parse(input);
-          const inner = parsed.input ? JSON.parse(parsed.input) : parsed;
-          const amount = inner.amount;
-          if (amount === undefined || amount === null || amount === 0) {
-            spendTracker.setMaxSpend(0);
-            spendTracker.clearMaxSpend();
-            return JSON.stringify({ status: "ok", message: "Max spend limit cleared. No budget cap." });
-          }
-          if (typeof amount !== "number" || amount < 0) {
-            return JSON.stringify({ error: "amount must be a positive number" });
-          }
-          spendTracker.setMaxSpend(amount);
-          return JSON.stringify({
-            status: "ok",
-            maxSpend: `$${amount.toFixed(amount >= 1 ? 2 : 4)}`,
-            message: `Max spend set to $${amount.toFixed(amount >= 1 ? 2 : 4)}`,
-          });
-        } catch {
-          return JSON.stringify({ error: "Invalid input. Use JSON with 'amount' field." });
-        }
-      },
-    }),
-    new DynamicTool({
-      name: "get_spend_report",
-      description:
-        "Show the current spend report: max budget, total spent, and remaining balance for x402 payments.",
-      func: async () => {
-        return JSON.stringify({ report: spendTracker.getReport() });
-      },
-    }),
-  ];
+const setMaxSpendParams = z.object({
+  amount: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe("Max total USDC spend in USD (e.g. 0.05 = 5 cents). Omit or use 0 to clear the limit."),
+});
+
+class SetMaxSpendTool extends BaseTool {
+  method = "set_max_spend";
+  name = "Set Max Spend";
+  description: string;
+  parameters: any;
+
+  constructor() {
+    super();
+    this.description =
+      "Set a maximum total USDC spend limit for x402 payments. Once set, the Max Spend Policy blocks any purchase that would exceed the budget. Input JSON with 'amount' (number, USD). Omit amount or use 0 to clear the limit.";
+    this.parameters = setMaxSpendParams;
+  }
+
+  async normalizeParams(params: { amount?: number }): Promise<{ amount?: number }> {
+    return params;
+  }
+
+  async coreAction(normalisedParams: { amount?: number }) {
+    const amount = normalisedParams.amount;
+    if (amount === undefined || amount === null || amount === 0) {
+      spendTracker.setMaxSpend(0);
+      spendTracker.clearMaxSpend();
+      const message = "Max spend limit cleared. No budget cap.";
+      return { raw: { status: "ok", message }, humanMessage: message };
+    }
+    spendTracker.setMaxSpend(amount);
+    const message = `Max spend set to $${amount.toFixed(amount >= 1 ? 2 : 4)}`;
+    return { raw: { status: "ok", maxSpend: message, message }, humanMessage: message };
+  }
+
+  async shouldSecondaryAction(): Promise<boolean> {
+    return false;
+  }
+
+  async secondaryAction(request: unknown) {
+    return request;
+  }
 }
 
-export { parsePriceToMicroUsdc, microUsdcToUsd };
+class GetSpendReportTool extends BaseTool {
+  method = "get_spend_report";
+  name = "Get Spend Report";
+  description: string;
+  parameters: any;
+
+  constructor() {
+    super();
+    this.description =
+      "Show the current spend report: max budget, total spent, and remaining balance for x402 payments.";
+    this.parameters = z.object({});
+  }
+
+  async normalizeParams(params: unknown): Promise<unknown> {
+    return params;
+  }
+
+  async coreAction() {
+    const report = spendTracker.getReport();
+    return { raw: { report }, humanMessage: report };
+  }
+
+  async shouldSecondaryAction(): Promise<boolean> {
+    return false;
+  }
+
+  async secondaryAction(request: unknown) {
+    return request;
+  }
+}
+
+export { SetMaxSpendTool, GetSpendReportTool, parsePriceToMicroUsdc, microUsdcToUsd };

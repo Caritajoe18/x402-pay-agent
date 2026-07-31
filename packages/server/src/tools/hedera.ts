@@ -5,6 +5,8 @@ import { HcsAuditTrailHook } from "@hashgraph/hedera-agent-kit/hooks";
 import { RejectToolPolicy } from "@hashgraph/hedera-agent-kit/policies";
 import { HederaLangchainToolkit } from "@hashgraph/hedera-agent-kit-langchain";
 import { config } from "../config.js";
+import { createPaymentsPlugin } from "./x402-merchant-tool.js";
+import { MaxSpendPolicy } from "./max-spend-policy.js";
 
 export function createHederaClient(): Client {
   const client = Client.forTestnet();
@@ -28,14 +30,16 @@ export function createToolkit(client: Client) {
     "delete_topic_tool",
   ]);
 
+  const maxSpendPolicy = new MaxSpendPolicy();
+
   return new HederaLangchainToolkit({
     client,
     configuration: {
-      plugins: allCorePlugins,
+      plugins: [...allCorePlugins, createPaymentsPlugin()],
       context: {
         mode: AgentMode.AUTONOMOUS,
         accountId: config.hedera.accountId,
-        hooks: [auditHook, rejectPolicy],
+        hooks: [auditHook, rejectPolicy, maxSpendPolicy],
       },
     },
   });

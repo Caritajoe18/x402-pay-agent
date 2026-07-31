@@ -63,7 +63,7 @@ Regardless of the merchant, the agent follows a standardized autonomous flow:
 packages/server/
 ├── src/
 │   ├── index.ts              # Entry point — starts server
-│   ├── config.ts             # Environment config (server + client identities)
+│   ├── config.ts             # Environment config (server + client identities, MAX_SPEND_USDC)
 │   ├── hedera.ts             # Hedera client + HCS audit helpers
 │   ├── x402.ts               # Server-side x402 paywall middleware
 │   ├── x402-client.ts        # Client-side x402 (wrapFetchWithPayment)
@@ -72,9 +72,17 @@ packages/server/
 │   │   ├── audit.ts          # GET /api/audit (Fetch HCS logs)
 │   │   ├── chat.ts           # POST /chat (AI Agent interface)
 │   │   ├── providers.ts      # GET /api/providers (list built-in providers)
-│   │   └── data.ts           # GET /api/data/:provider (direct data access)
+│   │   ├── data.ts           # GET /api/data/:provider (Ref Arch 1 pay-per-query)
+│   │   └── marketplace.ts    # GET /api/marketplace/:item (Ref Arch 2 pay-to-read)
 │   ├── tools/
-│   │   └── agent.ts          # LangChain agent with x402 merchant tools
+│   │   ├── agent.ts          # LangChain agent — binds toolkit + provider tools
+│   │   ├── hedera.ts         # HederaLangchainToolkit: hooks, policies, plugins
+│   │   ├── x402-merchant-tool.ts  # fetch_x402_merchant BaseTool + payments plugin
+│   │   ├── spend-tracker.ts  # SpendTracker state + set_max_spend/get_spend_report tools
+│   │   ├── max-spend-policy.ts    # MaxSpendPolicy (blocks purchases over budget)
+│   │   └── provider-tools.ts # Free get_* data tools
+│   ├── marketplace/
+│   │   └── catalog.ts        # Premium dataset catalog (prices, provenance, T&Cs)
 │   └── providers/
 │       ├── types.ts          # Provider interface
 │       ├── registry.ts       # Provider registry + x402 route builder
@@ -84,6 +92,39 @@ packages/server/
 │       └── esg.ts            # Carbon credits & ESG data
 ```
 (Sources:)
+
+### Budget & Spend Policy
+Every x402 payment costs the agent USDC. To keep autonomous spending under control, the agent enforces a **max-spend budget** with the Hedera Agent Kit's hooks-and-policies system.
+
+| Control | Mechanism | What it does |
+| :--- | :--- | :--- |
+| **MaxSpendPolicy** | Custom `AbstractPolicy` | Blocks any `fetch_x402_merchant` purchase that would exceed the budget — *before* a payment is signed |
+| **`set_max_spend`** | Tool | Set a max total USDC budget in USD (e.g. `0.05` = 5 cents); `0` or omit clears it |
+| **`get_spend_report`** | Tool | Show max budget, total spent, and remaining balance |
+| **`MAX_SPEND_USDC`** | Env var | Optional cap applied at agent startup (see `.env.example`) |
+
+The policy is evaluated at the **post-parameter-normalization** stage of the tool lifecycle. When a purchase would exceed the budget, the tool call is halted and the agent replies with a clear explanation instead of spending. Every successful x402 call also returns a `spendReport` so the agent can self-monitor.
+
+Example session:
+```
+User:  Set my max spend to $0.002
+Agent: Max spend set to $0.0020
+User:  Buy the BTC on-chain dataset and macro indicators
+Agent: Bought BTC On-Chain for $0.001 (remaining $0.001).
+       The Macro Indicators purchase was blocked by the Max Spend Policy
+       ($0.005 would exceed the $0.002 budget). Raise the limit with set_max_spend?
+```
+
+### Hooks & Policies (Hedera Agent Kit)
+The agent is built on `@hashgraph/hedera-agent-kit` v4, which runs every `BaseTool` through a 7-stage lifecycle with **hooks** (observe/modify, non-blocking) and **policies** (validation rules that block execution). See the [Hooks & Policies docs](https://docs.hedera.com/solutions/ai/agent-kit/hooks-and-policies).
+
+| Kit hook/policy | Type | Purpose |
+| :--- | :--- | :--- |
+| `HcsAuditTrailHook` | Built-in hook | Immutable audit trail — logs `fetch_x402_merchant` and topic submissions to an HCS topic |
+| `RejectToolPolicy` | Built-in policy | Blocks dangerous tools (`delete_account_tool`, `delete_topic_tool`) |
+| `MaxSpendPolicy` | **Custom policy** | Blocks x402 purchases that would exceed the max USDC budget |
+
+The x402 tooling ships as a custom plugin (`paymentsPlugin`) whose tools extend the kit's `BaseTool`, so hooks and policies apply to them exactly as they do to the core tools. `fetch_x402_merchant` is registered in `HcsAuditTrailHook.relevantTools`, and `MaxSpendPolicy.relevantTools` targets it.
 
 ### Quick Start
 ```bash
@@ -95,6 +136,11 @@ pnpm dev
 # Web Dashboard setup
 cd packages/web && pnpm install
 pnpm dev
+```
+
+Optional budget cap in `.env`:
+```bash
+MAX_SPEND_USDC=0.05   # agent refuses purchases exceeding $0.05 total
 ```
 
 ### Bounty Alignment
