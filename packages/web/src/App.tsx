@@ -45,6 +45,7 @@ interface MarketplaceItem {
 interface SpendInfo {
   limited: boolean;
   maxSpendUsd: number | null;
+  hardCapUsd?: number | null;
   totalSpentUsd: number;
   remainingUsd: number | null;
   report: string;
@@ -398,6 +399,15 @@ export default function App() {
           <div className="budget-legend">
             <span className="legend-label">Max spend</span>
             <strong className="legend-value">{formatUsd(spend.maxSpendUsd)}</strong>
+            {spend.hardCapUsd !== null && spend.hardCapUsd !== undefined && (
+              <>
+                <span className="legend-sep">·</span>
+                <span className="legend-label">Env cap</span>
+                <strong className="legend-value">
+                  {formatUsd(spend.hardCapUsd)}
+                </strong>
+              </>
+            )}
             <span className="legend-sep">·</span>
             <span className="legend-label">Spent</span>
             <strong className="legend-value">{formatUsd(spend.totalSpentUsd)}</strong>

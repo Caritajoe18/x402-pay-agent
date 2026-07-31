@@ -12,8 +12,8 @@ export function createAgent() {
   const toolkit = createToolkit(client);
 
   if (config.maxSpendUsdc !== null && config.maxSpendUsdc > 0) {
-    spendTracker.setMaxSpend(config.maxSpendUsdc);
-    console.log(`[agent] Max spend set from env: $${config.maxSpendUsdc}`);
+    spendTracker.setHardCap(config.maxSpendUsdc);
+    console.log(`[agent] Max spend env cap: $${config.maxSpendUsdc}`);
   }
 
   const ollamaHeaders: Record<string, string> = {};
