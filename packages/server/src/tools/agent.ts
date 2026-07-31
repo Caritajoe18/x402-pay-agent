@@ -6,10 +6,16 @@ import { listProviders } from "../providers/registry.js";
 import { createHederaClient, createToolkit } from "./hedera.js";
 import { createProviderTools } from "./provider-tools.js";
 import { createX402MerchantTool } from "./x402-merchant-tool.js";
+import { createBudgetTools, spendTracker } from "./spend-tracker.js";
 
 export function createAgent() {
   const client = createHederaClient();
   const toolkit = createToolkit(client);
+
+  if (config.maxSpendUsdc !== null && config.maxSpendUsdc > 0) {
+    spendTracker.setMaxSpend(config.maxSpendUsdc);
+    console.log(`[agent] Max spend set from env: $${config.maxSpendUsdc}`);
+  }
 
   const ollamaHeaders: Record<string, string> = {};
   if (config.ollama.apiKey) {
@@ -26,7 +32,8 @@ export function createAgent() {
   const hederaTools = toolkit.getTools();
   const providerTools = createProviderTools();
   const x402Tool = createX402MerchantTool();
-  const allTools = [...hederaTools, ...providerTools, x402Tool];
+  const budgetTools = createBudgetTools();
+  const allTools = [...hederaTools, ...providerTools, x402Tool, ...budgetTools];
   console.log("[agent] All tools:", allTools.map((t) => t.name));
   const llmWithTools = llm.bindTools(allTools);
 
@@ -69,6 +76,12 @@ export function createAgent() {
     `- Ref Arch 2 (Data marketplace): User asks for premium/on-chain data. Use 'fetch_x402_merchant' with /api/marketplace/* URLs.\n` +
     `- Free data: User wants free data without spending USDC. Use 'get_*' tools.\n` +
     `- External: User provides their own x402 URL. Use 'fetch_x402_merchant'.\n\n` +
+    `## BUDGET & SPEND POLICY\n` +
+    `The user can set a maximum USDC budget. Before making any paid call, check the budget.\n` +
+    `- 'set_max_spend' — set a max total spend in USD (e.g. 0.05 = 5 cents). The agent will refuse purchases exceeding it.\n` +
+    `- 'get_spend_report' — show current spend, remaining budget, and max limit.\n` +
+    `- If no max is set, there is no spend limit.\n` +
+    `- Every x402 call returns a 'spendReport' in the result. Always check it when the user asks about budget.\n\n` +
     `## IMPORTANT TOOL USAGE RULES\n` +
     `- For pay-per-query (Ref Arch 1): use 'fetch_x402_merchant' with a /api/data/* URL.\n` +
     `- For premium marketplace data (Ref Arch 2): use 'fetch_x402_merchant' with a /api/marketplace/* URL.\n` +

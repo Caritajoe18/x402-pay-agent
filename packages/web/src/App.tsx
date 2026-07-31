@@ -264,10 +264,11 @@ export default function App() {
                 Ask the agent to fetch real data &mdash; it pays USDC via x402 on Hedera.
                 <br />
                 <br />
-                <strong>Market data:</strong> "Get me bitcoin price"<br />
+                <strong>Market data:</strong> "Get me bitcoin price (pay per query)"<br />
                 <strong>Sentiment:</strong> "What's the news sentiment on ethereum?"<br />
                 <strong>Compliance:</strong> "Tax rates in Germany for digital services"<br />
                 <strong>ESG:</strong> "Show me verified carbon credits in Brazil"<br />
+                <strong>Marketplace:</strong> "Buy the BTC on-chain dataset"<br />
                 <strong>Multi-provider:</strong> "Get BTC price, ETH sentiment, and tax rates in Japan"
               </div>
             )}

@@ -33,5 +33,8 @@ export const config = {
     model: process.env.OLLAMA_MODEL || "llama3.2:3b",
     apiKey: process.env.OLLAMA_API_KEY || "",
   },
+  maxSpendUsdc: process.env.MAX_SPEND_USDC
+    ? parseFloat(process.env.MAX_SPEND_USDC)
+    : null,
   port: parseInt(process.env.PORT || "4021", 10),
 } as const;
