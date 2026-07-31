@@ -45,10 +45,14 @@ router.get("/api/data/:provider", async (req, res) => {
 
     res.json({
       ...result,
-      _audit: {
-        transactionId: hcs.transactionId,
-        hashscanUrl: hcs.hashscanUrl,
-        topicId: hcs.topicId,
+      _meta: {
+        provider: slug,
+        price: provider.price,
+        settlement: {
+          transactionId: hcs.transactionId,
+          hashscanUrl: hcs.hashscanUrl,
+          topicId: hcs.topicId,
+        },
       },
     });
   } catch (err: unknown) {
