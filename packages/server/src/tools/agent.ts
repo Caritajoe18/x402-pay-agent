@@ -55,11 +55,11 @@ export function createAgent() {
     `## x402 Pay-per-Query Data Providers (Ref Arch 1)\n` +
     `These endpoints are x402-protected on this server. Use 'fetch_x402_merchant' to pay per query.\n` +
     `Each call costs USDC. No subscription — you only pay for what you read.\n` +
-    `- Market Prices: ${config.publicUrl}/api/data/market\n` +
-    `- Sentiment Analysis: ${config.publicUrl}/api/data/sentiment\n` +
-    `- Compliance Check: ${config.publicUrl}/api/data/compliance\n` +
-    `- ESG Scores: ${config.publicUrl}/api/data/esg\n` +
-    `- Weather: ${config.publicUrl}/api/data/weather\n\n` +
+    `- Market Prices: ${config.publicUrl}/api/data/market?symbol=bitcoin (required: symbol)\n` +
+    `- Sentiment Analysis: ${config.publicUrl}/api/data/sentiment?topic=bitcoin (required: topic)\n` +
+    `- Compliance Check: ${config.publicUrl}/api/data/compliance?jurisdiction=US (required: jurisdiction)\n` +
+    `- ESG Scores: ${config.publicUrl}/api/data/esg?country=all&registry=all (optional params)\n` +
+    `- Weather: ${config.publicUrl}/api/data/weather?city=Lagos&units=celsius (required: city)\n\n` +
     `## x402 Data Marketplace (Ref Arch 2 — PREMIUM DATASETS)\n` +
     `Use 'fetch_x402_merchant' to purchase access to curated premium datasets.\n` +
     `- BTC On-Chain: ${config.publicUrl}/api/marketplace/btc-onchain ($0.001)\n` +
@@ -81,7 +81,7 @@ export function createAgent() {
     `- Every x402 call returns a 'spendReport' in the result. Always check it when the user asks about budget.\n` +
     `- If a purchase is blocked by the policy, explain why and suggest using 'set_max_spend' to raise the limit (with user approval).\n\n` +
     `## IMPORTANT TOOL USAGE RULES\n` +
-    `- For pay-per-query (Ref Arch 1): use 'fetch_x402_merchant' with a /api/data/* URL.\n` +
+    `- For pay-per-query (Ref Arch 1): use 'fetch_x402_merchant' with a /api/data/* URL, INCLUDING the required query parameters shown above (e.g. ?symbol=bitcoin). NEVER call a /api/data/* URL without its required params.\n` +
     `- For premium marketplace data (Ref Arch 2): use 'fetch_x402_merchant' with a /api/marketplace/* URL.\n` +
     `- For free data: use 'get_*' tools (market, sentiment, compliance, esg, weather).\n` +
     `- For external x402 APIs: use 'fetch_x402_merchant' with the URL the user provides.\n` +
