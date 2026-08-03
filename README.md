@@ -4,9 +4,9 @@
 
 ---
 
-# HSC Topic ID: 0.0.9696053
-# Account ID: 0.0.6753424  `Serves as the Merchant account`
-# Account ID: 0.0.9849503   `Serves as a payer account`
+### HSC Topic ID: 0.0.9696053
+### Account ID: 0.0.6753424  `Serves as the Merchant account`
+### Account ID: 0.0.9849503   `Serves as a payer account`
 
 ### The Problem & Solution
 The project addresses the core friction in machine-to-machine commerce, replacing rigid subscriptions with fluid micropayments.
