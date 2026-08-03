@@ -2,6 +2,8 @@ import { z } from "zod";
 import { BaseTool, type Plugin } from "@hashgraph/hedera-agent-kit";
 import { getFetchWithPayment } from "../x402-client.js";
 import { logToHcs } from "../hedera.js";
+import { listProviders } from "../providers/registry.js";
+import { dataCatalog } from "../marketplace/catalog.js";
 import {
   spendTracker,
   SetMaxSpendTool,
@@ -10,23 +12,25 @@ import {
 
 export const FETCH_X402_MERCHANT_TOOL = "fetch_x402_merchant";
 
-export const PRICE_MAP: Record<string, string> = {
-  "/api/data/market": "$0.002",
-  "/api/data/sentiment": "$0.002",
-  "/api/data/compliance": "$0.003",
-  "/api/data/esg": "$0.003",
-  "/api/data/weather": "$0.001",
-  "/api/marketplace/btc-onchain": "$0.001",
-  "/api/marketplace/eth-gas": "$0.001",
-  "/api/marketplace/macro-indicators": "$0.005",
-  "/api/marketplace/defi-tvl": "$0.003",
-  "/api/marketplace/sentiment-composite": "$0.002",
-};
+let priceMapCache: Record<string, string> | null = null;
+
+export function getPriceMap(): Record<string, string> {
+  if (!priceMapCache) {
+    priceMapCache = {};
+    for (const p of listProviders()) {
+      priceMapCache[`/api/data/${p.slug}`] = p.price;
+    }
+    for (const item of dataCatalog) {
+      priceMapCache[`/api/marketplace/${item.id}`] = item.price;
+    }
+  }
+  return priceMapCache;
+}
 
 export function lookupPrice(url: string): string | null {
   try {
     const path = new URL(url).pathname;
-    return PRICE_MAP[path] ?? null;
+    return getPriceMap()[path] ?? null;
   } catch {
     return null;
   }
@@ -80,11 +84,15 @@ class FetchX402MerchantTool extends BaseTool {
       const status = res.status;
       const body = await res.json().catch(() => null);
 
-      if (status === 200 && price) {
-        spendTracker.recordSpend(price);
+      const billedPrice = body?._meta?.price ?? price;
+
+      if (status === 200 && billedPrice) {
+        spendTracker.recordSpend(billedPrice);
       }
 
-      const settlementHeader = res.headers.get("x-payment-response");
+      const settlementHeader =
+        res.headers.get("payment-response") ??
+        res.headers.get("x-payment-response");
       let settlement = null;
       if (settlementHeader) {
         try {
@@ -96,7 +104,7 @@ class FetchX402MerchantTool extends BaseTool {
         event: "x402_merchant_purchase",
         url: fullUrl,
         status,
-        price,
+        price: billedPrice,
         settlement,
         timestamp: new Date().toISOString(),
       });
@@ -105,15 +113,16 @@ class FetchX402MerchantTool extends BaseTool {
       const raw = {
         url: fullUrl,
         status,
-        price,
+        price: billedPrice,
         data: body,
         settlement,
         spendReport,
-        transactionId: settlement?.transactionId ?? null,
+        transactionId:
+          settlement?.transaction ?? settlement?.transactionId ?? null,
       };
       const humanMessage =
         status === 200
-          ? `Fetched ${fullUrl} (${price ?? "price not listed"}). ${spendReport}`
+          ? `Fetched ${fullUrl} (${billedPrice ?? "price not listed"}). ${spendReport}`
           : `Request to ${fullUrl} returned HTTP ${status}`;
       return { raw, humanMessage };
     } catch (err: unknown) {
