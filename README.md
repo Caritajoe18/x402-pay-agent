@@ -10,6 +10,10 @@
 
 ---
 
+**Note for Judges:** The backend runs on Render's free tier, which puts the server to sleep after ~15 minutes of inactivity. If the dashboard appears unresponsive or the audit is empty, click the **Fetch Audit** button and wait 30–60 seconds for the server to wake up, then click it again — live data will load.
+
+---
+
 ### The Problem & Solution
 The project addresses the core friction in machine-to-machine commerce, replacing rigid subscriptions with fluid micropayments.
 
